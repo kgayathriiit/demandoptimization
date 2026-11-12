@@ -25,6 +25,17 @@ Both `index.html` and `data.js` must be in the repository root.
 Differences from the Simulink model: no electrical network (no losses, voltages or reactive power) and an
 instantaneous battery inverter. Shed limits use the load at each step of the horizon (paper equation 5).
 
+## Sources and loads
+
+- Sources: PV rating (kWp), battery capacity / power / starting SOC, diesel rating and price can be changed.
+  The grid has no import/export limit, as in the original model.
+- Loads: any number (default: the 5 loads of the study). Each load is critical (never shed) or flexible
+  (shed when the grid price is above its penalty). A load uses one of the 5 default curves or a profile
+  uploaded as Excel/CSV: one column of kW values for one day, or time in column A and kW in column B;
+  values are spread evenly over 24 h.
+- The LP gets one shed variable per flexible load per step. The diesel target is its rating minus PV and
+  battery power, limited to the rating (with the default 1200 kW this matches the Simulink model).
+
 ## Updating the site
 
 Edit or upload the files on GitHub and commit; GitHub Pages republishes in a minute or two.
