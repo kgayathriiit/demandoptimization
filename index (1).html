@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demand Optimization</title>
+<meta name="description" content="Live demand optimization of a renewable microgrid: battery dispatch and priority-based load shedding solved as a linear program.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data.js"></script>
+<style>
+:root{
+  --bg:#f7f8f6; --surface:#ffffff; --ink:#18201c; --muted:#5b6660; --line:#dde3df;
+  --accent:#0f7a5a; --accent-soft:#e3f2ec; --warn:#c2410c; --sun:#d99a06; --grid:#2563eb; --bess:#7c3aed; --dg:#b91c1c;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f1412; --surface:#171e1b; --ink:#e7ece9; --muted:#9aa8a1; --line:#2a3430;
+    --accent:#34c08f; --accent-soft:#16302a; --warn:#fb923c; --sun:#f5c044; --grid:#60a5fa; --bess:#a78bfa; --dg:#f87171;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+header.hero{padding:64px 0 40px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--accent-soft),transparent)}
+.venue{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 12px}
+h1{font-family:"Source Serif 4",Georgia,serif;font-size:clamp(28px,4.5vw,44px);line-height:1.15;margin:18px 0 14px}
+h2{font-family:"Source Serif 4",Georgia,serif;font-size:28px;margin:0 0 12px}
+h3{font-size:17px;margin:22px 0 6px}
+.authors{font-size:18px;font-weight:500}
+.affil{color:var(--muted);margin-top:4px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:14px;border:0;cursor:pointer;font-family:inherit}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:wait}
+section{padding:48px 0;border-bottom:1px solid var(--line)}
+.lead{font-size:18px;color:var(--muted);max-width:780px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card b{display:block;margin-bottom:4px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.eq{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin:10px 0;font-family:"Source Serif 4",Georgia,serif;font-size:18px;overflow-x:auto}
+.eq small{font-family:Inter,sans-serif;font-size:13px;color:var(--muted);float:right;margin-left:12px}
+.figure{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:18px}
+.figure svg{width:100%;height:auto;display:block}
+.cap{font-size:14px;color:var(--muted);margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px}
+.pill.crit{background:var(--accent-soft);color:var(--accent)}
+.pill.flex{background:#fdebd8;color:#9a3412}
+@media (prefers-color-scheme: dark){.pill.flex{background:#3a2414;color:#fdba74}}
+ol.steps{padding-left:22px} ol.steps li{margin:6px 0}
+code{font-size:.9em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+/* demo */
+.sim{display:grid;grid-template-columns:300px 1fr;gap:18px;margin-top:20px}
+@media (max-width:860px){.sim{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.seg{display:flex;flex-direction:column;gap:6px}
+.seg button{text-align:left;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.seg button .hint{color:inherit;opacity:.8}
+.fields{display:grid;grid-template-columns:1fr 92px;gap:8px 10px;align-items:center;margin-top:16px;font-size:14px}
+.fields input{width:100%;font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);text-align:right}
+.fields .sec{grid-column:1/-1;font-weight:600;margin-top:8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:4px 0 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.status{font-size:14px;margin-top:12px;min-height:22px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .1s}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--muted)}
+.chartbox{position:relative;height:290px}
+.stack>*+*{margin-top:14px}
+.note{font-size:14px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:12px 14px;margin-top:14px}
+.err{color:var(--warn);font-weight:600}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:13px}
+footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<main class="wrap" style="padding-top:40px;padding-bottom:48px">
+  <h1>Demand Optimization</h1>
+    <div class="sim">
+      <div class="panel">
+        <div class="seg" id="cases">
+          <button data-case="existing">Existing EMS<br><span class="hint">LP for the battery, no load shedding, diesel allowed</span></button>
+          <button data-case="proposed" class="on">Proposed EMS<br><span class="hint">LP with priority-based shedding, diesel allowed</span></button>
+          <button data-case="nodg">Proposed EMS, no diesel<br><span class="hint">LP with shedding, diesel not used</span></button>
+        </div>
+        <div class="fields">
+          <div class="sec">Shed penalties (Rs/kWh)</div>
+          <label for="sp3">Load 3 · tubelight</label><input id="sp3" type="number" step="1" min="0">
+          <label for="sp4">Load 4 · ceiling fan</label><input id="sp4" type="number" step="0.5" min="0">
+          <label for="sp5">Load 5 · AC</label><input id="sp5" type="number" step="0.5" min="0">
+          <div class="sec">Battery</div>
+          <label for="cap">Capacity (kWh)</label><input id="cap" type="number" step="100" min="100">
+          <label for="pmax">Max power (kW)</label><input id="pmax" type="number" step="50" min="0">
+          <label for="soc0">Starting SOC (%)</label><input id="soc0" type="number" step="1" min="20" max="80">
+          <div class="sec">Diesel</div>
+          <label for="dprice">Diesel price (Rs/L)</label><input id="dprice" type="number" step="1" min="0">
+        </div>
+        <div class="row">
+          <button class="btn" id="run">Run optimization</button>
+          <button class="btn alt" id="reset">Paper values</button>
+        </div>
+        <div class="status" id="status">Loading the solver…</div>
+        <div class="bar"><i id="prog"></i></div>
+      </div>
+
+      <div class="stack">
+        <div class="kpis" id="kpis"></div>
+        <div class="panel"><div class="chartbox"><canvas id="cPower"></canvas></div></div>
+        <div class="panel"><div class="chartbox"><canvas id="cShed"></canvas></div></div>
+        <div class="panel"><div class="chartbox"><canvas id="cSoc"></canvas></div></div>
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <b>The three cases at these settings</b>
+            <span class="row" style="margin:0"><button class="btn alt" id="compare">Compare all three</button><button class="btn alt" id="csv">Download results (CSV)</button></span>
+          </div>
+          <div class="tablewrap"><table id="cmp"><tr><td class="hint">Press “Compare all three” to run every case with the current settings.</td></tr></table></div>
+        </div>
+      </div>
+    </div>
+
+</main>
+
+<script>
+(() => {
+'use strict';
+const D = window.EMS_DATA;
+if (!D) { document.getElementById('status').innerHTML = '<span class="err">data.js is missing — upload it next to index.html.</span>'; return; }
+
+/* ------------------------------------------------------------------
+   1. PARAMETERS — values from initialConditions.m and the Simulink model
+   ------------------------------------------------------------------ */
+const PAPER = { sp3: 1000, sp4: 17, sp5: 14, cap: 2500, pmax: 400, soc0: 50, dprice: 70 };
+const FIXED = {
+  pvAreaEff: 2500 * 0.3,   // panelArea * panelEff  -> Ppv [W] = 750 * irradiance [W/m2]
+  socMin: 20, socMax: 80,  // LP energy limits (batteryMinMax.Emin / Emax)
+  socCutLo: 19, socCutHi: 85, eff: 0.96,   // BESS block: LimitVec [85 19], Efficiency 96 %
+  M: 241, nSolve: 288, dtOpt: 300,         // horizon, solves per day, optTime [s]
+  finalWeight: 1,                          // EnergyWeight in the MATLAB Function block
+  priceOffset: 5,                          // costDataOffset = costData + 5
+  PgMin: 1200,                             // Pg_min [kW], used by the coordination rule
+  fuelRate: 0.35,                          // fuel_eff_DGR [L/kWh]
+  dgAlpha: 0.246, dgBeta: 0.08145, dgRated: 1200,  // diesel consumption [L/h] = a*P + b*Prated
+  costFactor: 0.8,                         // Grid Cost Analysis: x80 / 100
+  nonGreen: 0.45, emGrid: 1.266, emDG: 3.15  // CO2: kg/kWh (grid) and kg/L (diesel)
+};
+const CASES = {
+  existing: { name: 'Existing EMS',            shed: false, dg: true  },
+  proposed: { name: 'Proposed EMS',            shed: true,  dg: true  },
+  nodg:     { name: 'Proposed EMS, no diesel', shed: true,  dg: false }
+};
+const NMIN = 1440;  // simulated minutes (data row i  <->  t = 60*(i+1) s)
+
+/* ------------------------------------------------------------------
+   2. FORECASTS — exactly as initialConditions.m builds them:
+      data(2:5:end), repeated for numDays = 2, window i:i+M-1
+   ------------------------------------------------------------------ */
+const sample2 = arr => { const s = []; for (let n = 0; n < FIXED.nSolve; n++) s.push(arr[1 + 5 * n]); return s.concat(s); };
+const F = {
+  price: sample2(D.price),
+  pv: sample2(D.irr.map(x => FIXED.pvAreaEff * x / 1000)),   // kW
+  l1: sample2(D.fridge), l2: sample2(D.cfl), l3: sample2(D.tube), l4: sample2(D.fan), l5: sample2(D.ac)
+};
+
+/* ------------------------------------------------------------------
+   3. THE LP (battSolarOptimize.m), written in CPLEX-LP format for HiGHS.
+      Units scaled to kW / kWh / h; this multiplies the MATLAB objective
+      (W, J, s) by a constant, so the optimal decisions are identical.
+      Names: PG grid, PB battery, SB stored energy, S3/S4/S5 shed.
+   ------------------------------------------------------------------ */
+const num = x => { const v = +x.toPrecision(12); return (Object.is(v, -0) ? 0 : v).toString(); };
+const term = (c, v) => (c < 0 ? '- ' + num(-c) : '+ ' + num(c)) + ' ' + v;
+
+function buildLP(j, Einit, p, shed) {
+  const M = FIXED.M, dt = FIXED.dtOpt / 3600, r0 = Math.max(j, 1) - 1;   // forecast row used at solve j
+  const cap = p.cap, Emin = FIXED.socMin / 100 * cap, Emax = FIXED.socMax / 100 * cap;
+  const obj = [], cons = [], bnd = [];
+  for (let k = 0; k < M; k++) {
+    const r = r0 + k;
+    obj.push(term(dt * F.price[r], 'PG' + k));
+    if (shed) obj.push(term(dt * p.sp3, 'S3_' + k), term(dt * p.sp4, 'S4_' + k), term(dt * p.sp5, 'S5_' + k));
+    const load = F.l1[r] + F.l2[r] + F.l3[r] + F.l4[r] + F.l5[r];
+    cons.push(` BAL${k}: PG${k} + PB${k}` + (shed ? ` + S3_${k} + S4_${k} + S5_${k}` : '') + ` = ${num(load - F.pv[r])}`);
+    if (k > 0) cons.push(` DYN${k}: SB${k} - SB${k - 1} + ${num(dt)} PB${k - 1} = 0`);
+    bnd.push(` PG${k} free`, ` ${num(-p.pmax)} <= PB${k} <= ${num(p.pmax)}`, ` ${num(Emin)} <= SB${k} <= ${num(Emax)}`);
+    if (shed) bnd.push(` 0 <= S3_${k} <= ${num(F.l3[r])}`, ` 0 <= S4_${k} <= ${num(F.l4[r])}`, ` 0 <= S5_${k} <= ${num(F.l5[r])}`);
+  }
+  obj.push(term(-FIXED.finalWeight, 'SB' + (M - 1)));
+  cons.push(` INIT: SB0 = ${num(Einit)}`);
+  return ['Minimize', ' obj: ' + obj.join(' '), 'Subject To', ...cons, 'Bounds', ...bnd, 'End'].join('\n');
+}
+
+/* ------------------------------------------------------------------
+   4. HiGHS solver (highs-js, WebAssembly) loaded from jsDelivr
+   ------------------------------------------------------------------ */
+const HIGHS_BASE = 'https://cdn.jsdelivr.net/npm/highs@1.8.0/build/';
+let highsPromise = null;
+function loadHighs(fresh) {
+  if (highsPromise && !fresh) return highsPromise;
+  highsPromise = (async () => {
+    let loader = null;
+    try {   // evaluate the UMD bundle with a CommonJS shim, so we do not depend on its global name
+      const code = await (await fetch(HIGHS_BASE + 'highs.js')).text();
+      const mod = { exports: {} };
+      new Function('module', 'exports', code)(mod, mod.exports);
+      loader = typeof mod.exports === 'function' ? mod.exports : mod.exports.default;
+    } catch (e) { console.warn('HiGHS shim load failed, trying script tag', e); }
+    if (typeof loader !== 'function') {
+      try {
+        await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = HIGHS_BASE + 'highs.js'; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+        loader = window.Module;
+      } catch (e) { console.warn('HiGHS script tag failed', e); }
+    }
+    if (typeof loader !== 'function') {   // last resort: the bundle may be an ES module
+      try { const m = await import(HIGHS_BASE + 'highs.js'); loader = m.default || m.Module; } catch (e) { console.warn(e); }
+    }
+    if (typeof loader !== 'function') throw new Error('the HiGHS solver could not be started');
+    return loader({ locateFile: f => HIGHS_BASE + f });
+  })();
+  return highsPromise;
+}
+async function solveLP(text) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { const h = await loadHighs(attempt > 0); return h.solve(text, { presolve: 'on' }); }
+    catch (e) { if (attempt === 1) throw e; }
+  }
+}
+
+/* ------------------------------------------------------------------
+   5. ONE SIMULATED DAY: LP every 5 min + coordination + battery, 1-min steps
+   ------------------------------------------------------------------ */
+async function simulateDay(caseKey, p, onProgress) {
+  const C = CASES[caseKey], cap = p.cap, dtH = 1 / 60;
+  const R = { t: [], demand: [], served: [], pv: [], pb: [], dg: [], grid: [], soc: [], price: [], priceOff: [], s3: [], s4: [], s5: [] };
+  let E = p.soc0 / 100 * cap, soc = p.soc0;
+  let cmd = { pb: 0, s3: 0, s4: 0, s5: 0 }, lastJ = -1, solves = 0, infeasible = 0;
+  let prev = { pv: 0, pb: 0, priceOff: 0 };       // the coordination block reads 1-step-delayed signals
+  const K = { gridCost: 0, litres: 0, importKWh: 0, exportKWh: 0, shedKWh: 0, demandKWh: 0, pvKWh: 0, peakImport: 0, peakEveningImport: 0, co2Grid: 0 };
+
+  for (let i = 0; i < NMIN; i++) {
+    const tSec = 60 * (i + 1);
+    const j = Math.min(FIXED.nSolve - 1, Math.floor(tSec / FIXED.dtOpt));
+    if (j !== lastJ) {                     // a new 5-minute optimization
+      lastJ = j; solves++;
+      const sol = await solveLP(buildLP(j, soc / 100 * cap, p, C.shed));
+      if (sol && sol.Status === 'Optimal') {
+        const col = n => sol.Columns[n].Primal;
+        let s = 0; for (let k = 0; k < 5; k++) s += col('PB' + k);
+        cmd = { pb: s / 5, s3: C.shed ? col('S3_0') : 0, s4: C.shed ? col('S4_0') : 0, s5: C.shed ? col('S5_0') : 0 };
+      } else { cmd = { pb: 0, s3: 0, s4: 0, s5: 0 }; infeasible++; }   // exitflag <= 0 -> zeros, as in the MATLAB code
+      if (solves % 6 === 0) { onProgress(solves / FIXED.nSolve); await new Promise(r => setTimeout(r)); }
+    }
+
+    // loads: delivered = actual - shed (cannot go below zero)
+    const l3 = D.tube[i], l4 = D.fan[i], l5 = D.ac[i];
+    const d3 = Math.max(0, l3 - cmd.s3), d4 = Math.max(0, l4 - cmd.s4), d5 = Math.max(0, l5 - cmd.s5);
+    const demand = D.fridge[i] + D.cfl[i] + l3 + l4 + l5;
+    const served = D.fridge[i] + D.cfl[i] + d3 + d4 + d5;
+    const pv = FIXED.pvAreaEff * D.irr[i] / 1000;
+    const priceOff = D.price[i] + FIXED.priceOffset;
+
+    // coordination (grid-connected branch of the Coordinated Power Controller)
+    let dg = 0;
+    if (!(prev.pv + p.pmax >= FIXED.PgMin) && C.dg && p.dprice * FIXED.fuelRate < prev.priceOff) {
+      dg = Math.max(0, FIXED.PgMin - prev.pv - prev.pb);
+    }
+
+    // battery: power limit, SOC protection, efficiency
+    let pb = Math.max(-p.pmax, Math.min(p.pmax, cmd.pb));
+    if (soc >= FIXED.socCutHi && pb < 0) pb = 0;
+    if (soc <= FIXED.socCutLo && pb > 0) pb = 0;
+    E -= (pb > 0 ? pb / FIXED.eff : pb * FIXED.eff) * dtH;
+    soc = E / cap * 100;
+
+    const grid = served - pv - pb - dg;
+    R.t.push(tSec); R.demand.push(demand); R.served.push(served); R.pv.push(pv); R.pb.push(pb); R.dg.push(dg);
+    R.grid.push(grid); R.soc.push(soc); R.price.push(D.price[i]); R.priceOff.push(priceOff);
+    R.s3.push(l3 - d3); R.s4.push(l4 - d4); R.s5.push(l5 - d5);
+
+    K.gridCost += FIXED.costFactor * priceOff * grid * dtH;
+    if (dg > 0) K.litres += (FIXED.dgAlpha * dg + FIXED.dgBeta * FIXED.dgRated) * dtH;
+    if (grid > 0) { K.importKWh += grid * dtH; K.co2Grid += FIXED.nonGreen * FIXED.emGrid * grid * dtH; } else K.exportKWh -= grid * dtH;
+    K.shedKWh += (demand - served) * dtH; K.demandKWh += demand * dtH; K.pvKWh += pv * dtH;
+    K.peakImport = Math.max(K.peakImport, grid);
+    if (tSec >= 18 * 3600 && tSec <= 22 * 3600) K.peakEveningImport = Math.max(K.peakEveningImport, grid);
+    prev = { pv, pb, priceOff };
+  }
+  K.dieselCost = K.litres * p.dprice;
+  K.co2DG = K.litres * FIXED.emDG;
+  K.totalCost = K.gridCost + K.dieselCost;
+  K.dgKWh = R.dg.reduce((a, b) => a + b, 0) * dtH;
+  K.solves = solves; K.infeasible = infeasible; K.endSoc = soc;
+  onProgress(1);
+  return { R, K };
+}
+
+/* ------------------------------------------------------------------
+   6. USER INTERFACE
+   ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const fields = ['sp3', 'sp4', 'sp5', 'cap', 'pmax', 'soc0', 'dprice'];
+const setFields = v => fields.forEach(f => $(f).value = v[f]);
+const readFields = () => { const p = {}; fields.forEach(f => p[f] = parseFloat($(f).value)); return p; };
+const fmt = x => Math.round(x).toLocaleString('en-IN');
+const rs = x => (x < 0 ? '−₹ ' : '₹ ') + fmt(Math.abs(x));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const hhmm = s => `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}`;
+const labels = Array.from({ length: NMIN }, (_, i) => hhmm(60 * (i + 1)));
+
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.color = css('--muted');
+Chart.defaults.borderColor = css('--line');
+const opts = (title, yTitle) => ({
+  responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { title: { display: true, text: title, color: css('--ink'), font: { size: 14, weight: '600' } },
+             legend: { labels: { boxWidth: 12 } },
+             tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(1)}` } } },
+  scales: { x: { ticks: { autoSkip: false, maxRotation: 0, callback: (v, i) => (60 * (i + 1)) % 10800 === 0 ? labels[i] : '' }, grid: { display: false } },
+            y: { title: { display: true, text: yTitle } } },
+  elements: { point: { radius: 0 }, line: { borderWidth: 1.8 } }
+});
+const ds = (label, color, extra = {}) => ({ label, data: [], borderColor: color, backgroundColor: color, ...extra });
+
+const cPower = new Chart($('cPower'), { type: 'line', data: { labels, datasets: [
+  ds('Demand', css('--muted'), { borderDash: [5, 4] }), ds('Delivered load', css('--accent')), ds('PV', css('--sun')),
+  ds('Battery (+ discharge)', css('--bess')), ds('Diesel', css('--dg')), ds('Grid (+ import / − export)', css('--grid'))] },
+  options: opts('Power flows over the day', 'kW') });
+const shedCol = ['#16a34a', '#f59e0b', '#dc2626'];
+const cShed = new Chart($('cShed'), { type: 'line', data: { labels, datasets:
+  ['Load 3 · tubelight', 'Load 4 · ceiling fan', 'Load 5 · AC'].map((n, k) => ds(n, shedCol[k], { fill: k === 0 ? 'origin' : '-1', backgroundColor: shedCol[k] + '66' })) },
+  options: (o => { o.scales.y.stacked = true; return o; })(opts('Load shed by the optimizer', 'kW')) });
+const cSoc = new Chart($('cSoc'), { type: 'line', data: { labels, datasets: [
+  ds('Battery SOC', css('--bess'), { yAxisID: 'y' }),
+  ds('Grid price + 5 (tariff)', css('--warn'), { yAxisID: 'y1' }),
+  ds('Price used by the LP', css('--warn'), { yAxisID: 'y1', borderDash: [4, 4], borderWidth: 1.2 })] },
+  options: (o => { o.scales.y.min = 0; o.scales.y.max = 100; o.scales.y.title.text = 'SOC (%)';
+    o.scales.y1 = { position: 'right', title: { display: true, text: 'Rs/kWh' }, grid: { drawOnChartArea: false } }; return o; })(opts('Battery state of charge and grid price', '%')) });
+
+let current = 'proposed', busy = false, lastResult = null;
+const cache = new Map();
+const key = (c, p) => c + JSON.stringify(p);
+
+function setBusy(b) { busy = b; ['run', 'compare', 'reset'].forEach(id => $(id).disabled = b); document.querySelectorAll('#cases button').forEach(x => x.disabled = b); }
+function status(msg, err) { $('status').innerHTML = err ? `<span class="err">${msg}</span>` : msg; }
+function progress(f) { $('prog').style.width = (100 * f).toFixed(0) + '%'; }
+
+function validate(p) {
+  if (fields.some(f => !isFinite(p[f]))) return 'Please fill in every field.';
+  if (p.soc0 < FIXED.socMin || p.soc0 > FIXED.socMax) return 'Starting SOC must be between 20 and 80 % (the LP limits).';
+  if (p.cap <= 0 || p.pmax < 0) return 'Battery capacity must be positive.';
+  return null;
+}
+
+async function runCase(c, p) {
+  const k = key(c, p);
+  if (cache.has(k)) return cache.get(k);
+  const t0 = performance.now();
+  const res = await simulateDay(c, p, f => { progress(f); status(`Solving ${CASES[c].name}: optimization ${Math.round(f * FIXED.nSolve)} of ${FIXED.nSolve}…`); });
+  res.seconds = (performance.now() - t0) / 1000;
+  cache.set(k, res);
+  return res;
+}
+
+function show(c, res) {
+  const { R, K } = res;
+  [R.demand, R.served, R.pv, R.pb, R.dg, R.grid].forEach((d, i) => cPower.data.datasets[i].data = d);
+  [R.s3, R.s4, R.s5].forEach((d, i) => cShed.data.datasets[i].data = d);
+  cSoc.data.datasets[0].data = R.soc; cSoc.data.datasets[1].data = R.priceOff; cSoc.data.datasets[2].data = R.price;
+  cPower.update(); cShed.update(); cSoc.update();
+  const tiles = [
+    [rs(K.gridCost), 'Grid cost for the day (net of export)'],
+    [rs(K.dieselCost), 'Diesel fuel cost'],
+    [`${fmt(K.shedKWh)} kWh`, `Load shed (${(100 * K.shedKWh / K.demandKWh).toFixed(1)}% of demand)`],
+    [`${fmt(K.peakEveningImport)} kW`, 'Max grid import, 18:00–22:00'],
+    [`${fmt(K.co2Grid + K.co2DG)} kg`, 'CO₂ (grid share + diesel)'],
+    [`${fmt(K.dgKWh)} kWh`, 'Diesel energy']
+  ];
+  $('kpis').innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  lastResult = { c, res };
+  status(`${CASES[c].name}: ${K.solves} optimizations solved in ${res.seconds.toFixed(1)} s` +
+    (K.infeasible ? ` · <span class="err">${K.infeasible} infeasible (battery outside 20–80%) → no action for those steps</span>` : ' · all optimal'));
+}
+
+async function runCurrent() {
+  if (busy) return;
+  const p = readFields(), e = validate(p);
+  if (e) return status(e, true);
+  setBusy(true);
+  try { show(current, await runCase(current, p)); }
+  catch (err) { console.error(err); status('The optimization could not run: ' + err.message + '. Check your internet connection and reload.', true); }
+  finally { setBusy(false); }
+}
+
+async function compareAll() {
+  if (busy) return;
+  const p = readFields(), e = validate(p);
+  if (e) return status(e, true);
+  setBusy(true);
+  try {
+    const rows = [];
+    for (const c of Object.keys(CASES)) rows.push([c, await runCase(c, p)]);
+    const base = rows[0][1].K.totalCost;
+    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">vs existing</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
+      rows.map(([c, { K }]) => `<tr${c === current ? ' style="font-weight:600"' : ''}><td>${CASES[c].name}</td><td class="num">${rs(K.gridCost)}</td><td class="num">${rs(K.dieselCost)}</td><td class="num">${rs(K.totalCost)}</td><td class="num">${c === 'existing' ? '—' : ((K.totalCost - base) / Math.abs(base) * 100).toFixed(1) + '%'}</td><td class="num">${fmt(K.co2Grid + K.co2DG)}</td><td class="num">${fmt(K.shedKWh)}</td><td class="num">${fmt(K.peakEveningImport)}</td></tr>`).join('');
+    show(current, cache.get(key(current, p)));
+  } catch (err) { console.error(err); status('The comparison could not run: ' + err.message, true); }
+  finally { setBusy(false); }
+}
+
+function downloadCSV() {
+  if (!lastResult) return;
+  const { c, res: { R } } = lastResult;
+  const head = 'time_s,demand_kW,delivered_kW,pv_kW,battery_kW,diesel_kW,grid_kW,soc_pct,price_lp_Rs_kWh,price_tariff_Rs_kWh,shed_load3_kW,shed_load4_kW,shed_load5_kW';
+  const lines = R.t.map((t, i) => [t, R.demand[i], R.served[i], R.pv[i], R.pb[i], R.dg[i], R.grid[i], R.soc[i], R.price[i], R.priceOff[i], R.s3[i], R.s4[i], R.s5[i]].map(v => +(+v).toFixed(4)).join(','));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([head + '\n' + lines.join('\n')], { type: 'text/csv' }));
+  a.download = `ems_${c}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.querySelectorAll('#cases button').forEach(b => b.addEventListener('click', () => {
+  if (busy) return;
+  document.querySelectorAll('#cases button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); current = b.dataset.case; runCurrent();
+}));
+$('run').addEventListener('click', runCurrent);
+$('compare').addEventListener('click', compareAll);
+$('csv').addEventListener('click', downloadCSV);
+$('reset').addEventListener('click', () => { setFields(PAPER); runCurrent(); });
+
+setFields(PAPER);
+loadHighs().then(() => runCurrent()).catch(err => status('The HiGHS solver could not be loaded (' + err.message + '). Check your internet connection and reload.', true));
+})();
+</script>
+</body>
+</html>
