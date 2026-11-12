@@ -558,7 +558,7 @@ async function runCase(c, p, ls) {
   const k = key(c, p, ls);
   if (cache.has(k)) return cache.get(k);
   const t0 = performance.now();
-  const res = await simulateDay(c, p, ls, f => { progress(f); status(`Running ${CASES[c].name}…`); });
+  const res = await simulateDay(c, p, ls, f => { progress(f); status(`Solving ${CASES[c].name}… ${Math.round(f * 100)}%`); });
   res.seconds = (performance.now() - t0) / 1000;
   cache.set(k, res);
   return res;
@@ -583,8 +583,8 @@ function show(c, res) {
   ];
   $('kpis').innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   lastResult = { c, res };
-  status(K.infeasible ? 'Some steps had no feasible solution (battery outside 20–80%), so no action was taken in those steps.' : '', K.infeasible > 0);
-  progress(0);
+  status(`${CASES[c].name}: solved in ${res.seconds.toFixed(1)} s` +
+    (K.infeasible ? ` · <span class="err">${K.infeasible} infeasible (battery outside 20–80%) → no action for those steps</span>` : ' · all optimal'));
 }
 
 async function runCurrent() {
