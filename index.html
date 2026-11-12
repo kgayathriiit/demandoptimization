@@ -230,11 +230,11 @@ const NMIN = 1440, NPTS = 1441;   // data row i  <->  t = 60*(i+1) s
 /* default appliance curves (kW) and the five default loads */
 const CURVES = { fridge: 'Refrigerator curve', cfl: 'CFL curve', tube: 'Tubelight curve', fan: 'Ceiling fan curve', ac: 'AC curve' };
 const DEFAULT_LOADS = [
-  { name: 'Refrigerator', type: 'critical', sp: 0,    curve: 'fridge' },
-  { name: 'CFL',          type: 'critical', sp: 0,    curve: 'cfl' },
-  { name: 'Tubelight',    type: 'flexible', sp: 1000, curve: 'tube' },
-  { name: 'Ceiling fan',  type: 'flexible', sp: 17,   curve: 'fan' },
-  { name: 'AC',           type: 'flexible', sp: 14,   curve: 'ac' }
+  { name: 'Load 1', type: 'critical', sp: 0,    curve: 'fridge' },
+  { name: 'Load 2',       type: 'critical', sp: 0,    curve: 'cfl' },
+  { name: 'Load 3',       type: 'flexible', sp: 1000, curve: 'tube' },
+  { name: 'Load 4',       type: 'flexible', sp: 17,   curve: 'fan' },
+  { name: 'Load 5',       type: 'flexible', sp: 14,   curve: 'ac' }
 ];
 let nextId = 1;
 const newLoad = o => ({ id: nextId++, name: o.name, type: o.type, sp: o.sp, curve: o.curve, upload: null });
