@@ -145,8 +145,7 @@ input:disabled{opacity:.45}
       <div class="ic" style="background:color-mix(in srgb,var(--grid) 16%,transparent);color:var(--grid)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.5L7 21.5M12 2.5l5 19M8.3 16.5h7.4M9.6 11.5h4.8M6 6.5h12M10.8 6.5L12 2.5l1.2 4"/></svg>
       </div>
-      <div style="flex:1"><b>Utility grid</b>
-        <p>No import or export limit, as in the model. Tariff = price used by the optimizer + 5 Rs/kWh.</p></div>
+      <div style="flex:1;align-self:center"><b style="margin:0">Utility grid</b></div>
     </div>
   </div>
 
@@ -163,7 +162,7 @@ input:disabled{opacity:.45}
       <button class="btn alt small" id="resetLoads">Default 5 loads</button>
       <button class="btn alt small" id="template">Download profile template</button>
     </div>
-    <p class="hint">Profile file (Excel or CSV): one column of load in kW for one day (for example 24 hourly or 1440 one-minute values), or time in column A and load in kW in column B. Values are spread evenly over 24 h. Without a file, a load uses one of the five default curves. Critical loads are never shed; a flexible load is shed when the grid price is above its penalty.</p>
+    <p class="hint">Profile file (Excel or CSV): one column of load in kW for one day (for example 24 hourly or 1440 one-minute values), or time in column A and load in kW in column B. Values are spread evenly over 24 h. Without a file, a load uses its default profile. Critical loads are never shed; a flexible load is shed when the grid price is above its penalty.</p>
     <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" hidden>
   </div>
 
@@ -172,13 +171,12 @@ input:disabled{opacity:.45}
   <div class="sim">
     <div class="panel">
       <div class="seg" id="cases">
-        <button data-case="existing">Existing EMS<br><span class="hint">LP for the battery, no load shedding, diesel allowed</span></button>
-        <button data-case="proposed" class="on">Proposed EMS<br><span class="hint">LP with priority-based shedding, diesel allowed</span></button>
-        <button data-case="nodg">Proposed EMS, no diesel<br><span class="hint">LP with shedding, diesel not used</span></button>
+        <button data-case="existing">Rule based<br><span class="hint">No load shedding, diesel allowed</span></button>
+        <button data-case="proposed" class="on">Optimized<br><span class="hint">Priority-based load shedding, diesel allowed</span></button>
+        <button data-case="nodg">Optimized, no diesel<br><span class="hint">Priority-based load shedding, diesel not used</span></button>
       </div>
       <div class="row">
         <button class="btn" id="run">Run optimization</button>
-        <button class="btn alt" id="reset">Paper values</button>
       </div>
       <div class="status" id="status">Loading the solver…</div>
       <div class="bar"><i id="prog"></i></div>
@@ -223,9 +221,9 @@ const FIXED = {
   nonGreen: 0.45, emGrid: 1.266, emDG: 3.15
 };
 const CASES = {
-  existing: { name: 'Existing EMS',            shed: false, dg: true  },
-  proposed: { name: 'Proposed EMS',            shed: true,  dg: true  },
-  nodg:     { name: 'Proposed EMS, no diesel', shed: true,  dg: false }
+  existing: { name: 'Rule based',          shed: false, dg: true  },
+  proposed: { name: 'Optimized',           shed: true,  dg: true  },
+  nodg:     { name: 'Optimized, no diesel', shed: true,  dg: false }
 };
 const NMIN = 1440, NPTS = 1441;   // data row i  <->  t = 60*(i+1) s
 
@@ -444,14 +442,12 @@ const ICON_PLUG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 function renderLoads() {
   $('loadRows').innerHTML = loads.map(L => {
     const pr = profileOf(L), peak = Math.max(...pr);
-    const opts = Object.entries(CURVES).map(([k, n]) => `<option value="${k}"${!L.upload && L.curve === k ? ' selected' : ''}>${n}</option>`).join('')
-      + (L.upload ? `<option value="__upload" selected>File: ${esc(L.upload.name)}</option>` : '');
     return `<tr data-id="${L.id}">
       <td><div class="lic ${L.type}" title="${L.type}">${ICON_PLUG}</div></td>
       <td><input type="text" data-k="name" value="${esc(L.name)}" aria-label="Load name"></td>
       <td><select data-k="type" aria-label="Load type"><option value="critical"${L.type === 'critical' ? ' selected' : ''}>Critical</option><option value="flexible"${L.type === 'flexible' ? ' selected' : ''}>Flexible</option></select></td>
       <td class="num"><input type="number" data-k="sp" min="0" step="0.5" value="${L.type === 'flexible' ? L.sp : ''}" ${L.type === 'critical' ? 'disabled placeholder="—"' : ''} aria-label="Shed penalty"></td>
-      <td><div class="prof"><select data-k="curve" aria-label="Load profile">${opts}</select><button class="btn alt small" data-act="upload">Upload file</button></div></td>
+      <td><div class="prof"><span class="peak">${L.upload ? 'File: ' + esc(L.upload.name) : 'Default'}</span><button class="btn alt small" data-act="upload">Upload file</button>${L.upload ? '<button class="btn alt small" data-act="clearfile">Use default</button>' : ''}</div></td>
       <td class="num peak">${fmt(peak)} kW</td>
       <td><button class="del" data-act="remove" title="Remove load" aria-label="Remove ${esc(L.name)}">×</button></td></tr>`;
   }).join('');
@@ -477,7 +473,6 @@ $('loadRows').addEventListener('change', e => {
   const L = findLoad(e.target), k = e.target.dataset.k;
   if (!L || !k) return;
   if (k === 'type') { L.type = e.target.value; if (L.type === 'flexible' && !(L.sp > 0)) L.sp = 15; renderLoads(); }
-  if (k === 'curve' && e.target.value !== '__upload') { L.curve = e.target.value; L.upload = null; renderLoads(); }
 });
 let uploadTarget = null;
 $('loadRows').addEventListener('click', e => {
@@ -487,6 +482,7 @@ $('loadRows').addEventListener('click', e => {
     if (loads.length === 1) return status('Keep at least one load.', true);
     loads = loads.filter(x => x !== L); renderLoads();
   }
+  if (b.dataset.act === 'clearfile') { L.upload = null; renderLoads(); }
   if (b.dataset.act === 'upload') { uploadTarget = L; $('fileIn').value = ''; $('fileIn').click(); }
 });
 $('fileIn').addEventListener('change', async () => {
@@ -587,8 +583,8 @@ function show(c, res) {
   ];
   $('kpis').innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   lastResult = { c, res };
-  status(`${CASES[c].name}: ${K.solves} optimizations solved in ${res.seconds.toFixed(1)} s` +
-    (K.infeasible ? ` · <span class="err">${K.infeasible} infeasible (battery outside 20–80%) → no action for those steps</span>` : ' · all optimal'));
+  status(K.infeasible ? `${K.infeasible} of ${K.solves} optimizations infeasible (battery outside 20–80%) → no action for those steps` : '', K.infeasible > 0);
+  progress(0);
 }
 
 async function runCurrent() {
@@ -612,7 +608,7 @@ async function compareAll() {
     const rows = [];
     for (const c of Object.keys(CASES)) rows.push([c, await runCase(c, p, ls)]);
     const base = rows[0][1].K.totalCost;
-    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">vs existing</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
+    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">vs rule based</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
       rows.map(([c, { K }]) => `<tr${c === current ? ' style="font-weight:600"' : ''}><td>${CASES[c].name}</td><td class="num">${rs(K.gridCost)}</td><td class="num">${rs(K.dieselCost)}</td><td class="num">${rs(K.totalCost)}</td><td class="num">${c === 'existing' ? '—' : ((K.totalCost - base) / Math.abs(base) * 100).toFixed(1) + '%'}</td><td class="num">${fmt(K.co2Grid + K.co2DG)}</td><td class="num">${fmt(K.shedKWh)}</td><td class="num">${fmt(K.peakEveningImport)}</td></tr>`).join('');
     show(current, cache.get(key(current, p, ls)));
   } catch (err) { console.error(err); status('The comparison could not run: ' + esc(err.message), true); }
@@ -637,7 +633,6 @@ document.querySelectorAll('#cases button').forEach(b => b.addEventListener('clic
 $('run').addEventListener('click', runCurrent);
 $('compare').addEventListener('click', compareAll);
 $('csv').addEventListener('click', downloadCSV);
-$('reset').addEventListener('click', () => { setFields(PAPER); loads = DEFAULT_LOADS.map(newLoad); renderLoads(); runCurrent(); });
 
 setFields(PAPER);
 renderLoads();
