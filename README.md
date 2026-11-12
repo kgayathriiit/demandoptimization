@@ -1,33 +1,31 @@
 # Coordinated Load-Generation Optimization for Renewable Integrated Microgrid
 
-Project page for the NPEC 2025 paper by Gayathri K and Pallavi Bharadwaj (IIT Gandhinagar).
+Project page for the NPEC 2025 paper by Gayathri K and Pallavi Bharadwaj (SPEL, IIT Gandhinagar).
 Paper: https://doi.org/10.1109/NPEC66512.2025.11450301
 
-The whole site is one file, `index.html`. It needs no build step and no installs.
+## Files
 
-## Put it online with GitHub Pages
+| File | What it is |
+|---|---|
+| `index.html` | The page, the LP model and the 1-minute simulation (JavaScript) |
+| `data.js` | Load, PV-irradiance and price data (1-minute, 24 h), generated from `pvLoadPriceData.mat` and `Appliancedata_v1 - Copy.csv` exactly as `initialConditions.m` processes them |
+| `README.md` | This file |
 
-1. **Create a repository.** On github.com click **New repository**. Give it a name
-   (for example `microgrid-ems`), set it to **Public**, and click **Create repository**.
-2. **Upload the files.** On the new repo page click **uploading an existing file**,
-   drag in `index.html` and `README.md`, then click **Commit changes**.
-3. **Turn on Pages.** Go to **Settings → Pages**. Under *Build and deployment*,
-   set *Source* to **Deploy from a branch**, branch **main**, folder **/ (root)**, and click **Save**.
-4. **Open your site.** After about a minute the Pages screen shows the link:
-   `https://<your-github-username>.github.io/microgrid-ems/`
+Both `index.html` and `data.js` must be in the repository root.
 
-To change the page later, edit `index.html` on GitHub (pencil icon) and commit; the site updates in a minute or two.
+## How the live optimization works
 
-## Preview before uploading
+1. Every 5 minutes of the simulated day (288 times), the page builds the linear program of
+   `battSolarOptimize.m` (241-step horizon, same objective, penalties and limits) and solves it with
+   the HiGHS solver (loaded from jsDelivr, `highs@1.8.0`).
+2. The battery set-point is the mean of the first 5 planned steps; the shed amounts of the first step are applied.
+3. A 1-minute power balance applies the Simulink coordination rules (diesel dispatch, battery
+   protection at 19 % / 85 % SOC, 96 % efficiency) and computes grid power, cost and CO2.
 
-Double-click `index.html` to open it in your browser. It loads Chart.js and fonts from the internet, so stay online.
+Differences from the Simulink model: no electrical network (no losses, voltages or reactive power) and an
+instantaneous battery inverter. Shed limits use the load at each step of the horizon (paper equation 5).
 
-## About the PDF
+## Updating the site
 
-Link to IEEE Xplore (as the page already does) rather than uploading the published IEEE PDF — IEEE's author-posting
-policy generally allows the accepted (pre-print) version on a personal or lab site, not the final published copy.
-
-## About the interactive demo
-
-The demo uses load, solar and price curves traced approximately from the paper's figures and a simplified
-rule-based dispatch. It illustrates the method's behaviour; the paper's numbers come from the MATLAB/Simulink study.
+Edit or upload the files on GitHub and commit; GitHub Pages republishes in a minute or two.
+To change the data, regenerate `data.js` with the same field names.

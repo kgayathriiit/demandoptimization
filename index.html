@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Coordinated Load-Generation Optimization</title>
-<meta name="description" content="Project page: Coordinated Load-Generation Optimization for Renewable Integrated Microgrid (NPEC 2025), IIT Gandhinagar.">
+<meta name="description" content="Project page and live LP demo: Coordinated Load-Generation Optimization for Renewable Integrated Microgrid (NPEC 2025), SPEL, IIT Gandhinagar.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data.js"></script>
 <style>
 :root{
   --bg:#f7f8f6; --surface:#ffffff; --ink:#18201c; --muted:#5b6660; --line:#dde3df;
@@ -20,54 +21,64 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
 a{color:var(--accent)}
-.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
 header.hero{padding:64px 0 40px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--accent-soft),transparent)}
 .venue{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:3px 12px}
 h1{font-family:"Source Serif 4",Georgia,serif;font-size:clamp(28px,4.5vw,44px);line-height:1.15;margin:18px 0 14px}
 h2{font-family:"Source Serif 4",Georgia,serif;font-size:28px;margin:0 0 12px}
-h3{font-size:17px;margin:20px 0 6px}
+h3{font-size:17px;margin:22px 0 6px}
 .authors{font-size:18px;font-weight:500}
-.authors span{white-space:nowrap}
 .affil{color:var(--muted);margin-top:4px}
 .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:14px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:14px;border:0;cursor:pointer;font-family:inherit}
 .btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:wait}
 section{padding:48px 0;border-bottom:1px solid var(--line)}
-.lead{font-size:18px;color:var(--muted);max-width:760px}
+.lead{font-size:18px;color:var(--muted);max-width:780px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:20px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
 .card b{display:block;margin-bottom:4px}
 .card p{margin:0;color:var(--muted);font-size:15px}
 .eq{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;margin:10px 0;font-family:"Source Serif 4",Georgia,serif;font-size:18px;overflow-x:auto}
-.eq small{font-family:Inter,sans-serif;font-size:13px;color:var(--muted);float:right}
+.eq small{font-family:Inter,sans-serif;font-size:13px;color:var(--muted);float:right;margin-left:12px}
 .figure{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:18px}
 .figure svg{width:100%;height:auto;display:block}
 .cap{font-size:14px;color:var(--muted);margin-top:8px}
 table{width:100%;border-collapse:collapse;font-size:15px}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .tablewrap{overflow-x:auto}
 .pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px}
 .pill.crit{background:var(--accent-soft);color:var(--accent)}
 .pill.flex{background:#fdebd8;color:#9a3412}
 @media (prefers-color-scheme: dark){.pill.flex{background:#3a2414;color:#fdba74}}
-/* simulator */
-.sim{display:grid;grid-template-columns:280px 1fr;gap:18px;margin-top:20px}
-@media (max-width:820px){.sim{grid-template-columns:1fr}}
+ol.steps{padding-left:22px} ol.steps li{margin:6px 0}
+code{font-size:.9em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+/* demo */
+.sim{display:grid;grid-template-columns:300px 1fr;gap:18px;margin-top:20px}
+@media (max-width:860px){.sim{grid-template-columns:1fr}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
 .seg{display:flex;flex-direction:column;gap:6px}
 .seg button{text-align:left;font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
 .seg button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-label.sl{display:block;font-size:14px;margin-top:16px}
-label.sl output{float:right;font-weight:600}
-input[type=range]{width:100%;accent-color:var(--accent)}
+.seg button .hint{color:inherit;opacity:.8}
+.fields{display:grid;grid-template-columns:1fr 92px;gap:8px 10px;align-items:center;margin-top:16px;font-size:14px}
+.fields input{width:100%;font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);text-align:right}
+.fields .sec{grid-column:1/-1;font-weight:600;margin-top:8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .hint{font-size:13px;color:var(--muted);margin:4px 0 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.status{font-size:14px;margin-top:12px;min-height:22px}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .1s}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
-.kpi .v{font-size:22px;font-weight:700}
+.kpi .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
 .kpi .l{font-size:13px;color:var(--muted)}
-.chartbox{position:relative;height:280px;margin-bottom:16px}
-.note{font-size:13px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin-top:14px}
+.chartbox{position:relative;height:290px}
+.stack>*+*{margin-top:14px}
+.note{font-size:14px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:12px 14px;margin-top:14px}
+.err{color:var(--warn);font-weight:600}
 pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:13px}
 footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
 </style>
@@ -78,11 +89,11 @@ footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
   <div class="wrap">
     <span class="venue">NPEC 2025 · 12th National Power Electronics Conference</span>
     <h1>Coordinated Load-Generation Optimization for Renewable Integrated Microgrid</h1>
-    <div class="authors"><span>Gayathri K</span> &nbsp;·&nbsp; <span>Pallavi Bharadwaj</span></div>
-    <div class="affil">Department of Electrical Engineering, Indian Institute of Technology Gandhinagar, Gujarat, India</div>
+    <div class="authors">Gayathri K &nbsp;·&nbsp; Pallavi Bharadwaj</div>
+    <div class="affil">SPEL, Department of Electrical Engineering, Indian Institute of Technology Gandhinagar, Gujarat, India</div>
     <div class="btns">
       <a class="btn" href="https://doi.org/10.1109/NPEC66512.2025.11450301" target="_blank" rel="noopener">Paper (IEEE Xplore)</a>
-      <a class="btn alt" href="#simulator">Try the interactive demo</a>
+      <a class="btn alt" href="#demo">Run the live optimization</a>
       <a class="btn alt" href="#cite">Cite</a>
     </div>
   </div>
@@ -92,12 +103,12 @@ footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
 <section id="overview">
   <div class="wrap">
     <h2>In one paragraph</h2>
-    <p class="lead">A microgrid with solar PV, a battery, a diesel generator and a grid connection has to keep supply equal to demand at every moment while paying as little as possible for grid power. This work folds <b>load management directly into the cost optimization</b>: loads are split into critical and flexible ones, and flexible loads are shed in priority order only when a shed-penalty term says it is worth it. The result is lower grid cost during expensive hours, uninterrupted supply to critical loads, and — once the diesel generator is removed — near-zero grid import at peak price with no fossil generation.</p>
+    <p class="lead">A microgrid with solar PV, a battery, a diesel generator and a grid connection must keep supply equal to demand at every moment while paying as little as possible for grid power. This work puts <b>load management inside the cost optimization</b>: loads are split into critical and flexible ones, and a linear program decides every five minutes how to run the battery and how much flexible load to shed, with a penalty that stops it from shedding when it is not worth it. Critical loads are always served, grid cost falls during expensive hours, and without the diesel generator the microgrid still rides through the evening price peak.</p>
     <div class="cards">
-      <div class="card"><b>Coordinated optimization</b><p>Generation (PV, BESS, DG, grid) and load are scheduled together to minimise grid import cost.</p></div>
-      <div class="card"><b>Priority-based shedding</b><p>Critical loads are never shed; flexible loads go in a fixed order, lowest priority first.</p></div>
-      <div class="card"><b>Shed penalty</b><p>A penalty term in the objective stops the optimizer from cutting load when it is not needed.</p></div>
-      <div class="card"><b>Lower emissions</b><p>Demand control lets the system ride through peak-price hours without running the diesel generator.</p></div>
+      <div class="card"><b>Coordinated optimization</b><p>Battery dispatch and load shedding are chosen together to minimise grid cost over a 20-hour look-ahead.</p></div>
+      <div class="card"><b>Priority by penalty</b><p>Each flexible load has its own shed penalty, so the lowest-priority load (AC) is shed first.</p></div>
+      <div class="card"><b>Receding horizon</b><p>The LP is re-solved every 5 minutes with the latest battery state; only the first decisions are applied.</p></div>
+      <div class="card"><b>Lower emissions</b><p>Demand control lets the system cover the evening peak without running the diesel generator.</p></div>
     </div>
   </div>
 </section>
@@ -105,39 +116,38 @@ footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
 <section id="system">
   <div class="wrap">
     <h2>The microgrid</h2>
-    <p>All sources and the load meet at the point of common coupling (PCC). The energy management system (EMS) reads the state of every unit and sends set-points to the battery, the diesel generator, the grid interface and the flexible loads.</p>
+    <p>All units meet at the point of common coupling (PCC). The energy management system (EMS) sends set-points to the battery, the diesel generator and the flexible loads; the utility grid supplies or absorbs the balance.</p>
     <div class="figure">
       <svg viewBox="0 0 720 300" role="img" aria-label="Microgrid block diagram">
         <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="currentColor"/></marker></defs>
-        <g style="color:var(--muted)" font-family="Inter,sans-serif" font-size="15" font-weight="600">
-          <rect x="20" y="20" width="150" height="46" rx="8" fill="none" stroke="var(--sun)" stroke-width="2"/><text x="95" y="49" text-anchor="middle" fill="var(--ink)">PV array · 700 kW</text>
-          <rect x="20" y="90" width="150" height="46" rx="8" fill="none" stroke="var(--bess)" stroke-width="2"/><text x="95" y="119" text-anchor="middle" fill="var(--ink)">BESS · 400 kW</text>
-          <rect x="20" y="160" width="150" height="46" rx="8" fill="none" stroke="var(--dg)" stroke-width="2"/><text x="95" y="189" text-anchor="middle" fill="var(--ink)">Diesel · 1200 kW</text>
+        <g style="color:var(--muted)" font-family="Inter,sans-serif" font-size="14" font-weight="600">
+          <rect x="14" y="20" width="168" height="46" rx="8" fill="none" stroke="var(--sun)" stroke-width="2"/><text x="98" y="48" text-anchor="middle" fill="var(--ink)">PV · 760 kW peak</text>
+          <rect x="14" y="90" width="168" height="46" rx="8" fill="none" stroke="var(--bess)" stroke-width="2"/><text x="98" y="118" text-anchor="middle" fill="var(--ink)">BESS · 400 kW / 2500 kWh</text>
+          <rect x="14" y="160" width="168" height="46" rx="8" fill="none" stroke="var(--dg)" stroke-width="2"/><text x="98" y="188" text-anchor="middle" fill="var(--ink)">Diesel · 1200 kW</text>
           <line x1="330" y1="10" x2="330" y2="220" stroke="var(--ink)" stroke-width="6"/><text x="330" y="240" text-anchor="middle" fill="var(--ink)">PCC</text>
-          <line x1="170" y1="43" x2="324" y2="43" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
-          <line x1="176" y1="113" x2="324" y2="113" stroke="currentColor" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
-          <line x1="170" y1="183" x2="324" y2="183" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
-          <rect x="500" y="40" width="180" height="46" rx="8" fill="none" stroke="var(--accent)" stroke-width="2"/><text x="590" y="62" text-anchor="middle" fill="var(--ink)">Load</text><text x="590" y="78" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="500">2 critical + 3 flexible</text>
-          <rect x="500" y="130" width="180" height="46" rx="8" fill="none" stroke="var(--grid)" stroke-width="2"/><text x="590" y="159" text-anchor="middle" fill="var(--ink)">Utility grid</text>
+          <line x1="182" y1="43" x2="324" y2="43" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+          <line x1="188" y1="113" x2="324" y2="113" stroke="currentColor" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
+          <line x1="182" y1="183" x2="324" y2="183" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
+          <rect x="500" y="40" width="180" height="46" rx="8" fill="none" stroke="var(--accent)" stroke-width="2"/><text x="590" y="61" text-anchor="middle" fill="var(--ink)">Load</text><text x="590" y="77" text-anchor="middle" fill="var(--muted)" font-size="12" font-weight="500">2 critical + 3 flexible</text>
+          <rect x="500" y="130" width="180" height="46" rx="8" fill="none" stroke="var(--grid)" stroke-width="2"/><text x="590" y="158" text-anchor="middle" fill="var(--ink)">Utility grid</text>
           <line x1="336" y1="63" x2="494" y2="63" stroke="currentColor" stroke-width="2" marker-end="url(#ar)"/>
           <line x1="342" y1="153" x2="494" y2="153" stroke="currentColor" stroke-width="2" marker-end="url(#ar)" marker-start="url(#ar)"/>
           <rect x="270" y="252" width="120" height="40" rx="8" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/><text x="330" y="277" text-anchor="middle" fill="var(--ink)">EMS</text>
-          <path d="M270 272 H8 V113 H14" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="1.5"/>
-          <path d="M8 183 H14" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="1.5"/>
-          <path d="M390 272 H705 V63 H686 M705 153 H686" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="1.5"/>
+          <path d="M270 272 H6 V113 H12 M6 183 H12" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="1.5"/>
+          <path d="M390 272 H705 V63 H686" fill="none" stroke="currentColor" stroke-dasharray="5 4" stroke-width="1.5"/>
         </g>
       </svg>
-      <div class="cap">Block diagram of the microgrid with the proposed EMS (dashed lines: EMS control signals). Ratings from the simulation study.</div>
+      <div class="cap">Block diagram of the microgrid with the EMS (dashed: EMS set-points). Ratings from the MATLAB/Simulink study.</div>
     </div>
 
     <h3>The five loads (aggregate of 1000 households)</h3>
     <div class="tablewrap"><table>
-      <tr><th>Load</th><th>Appliance</th><th>Type</th><th>Shed order</th></tr>
-      <tr><td>Load 1</td><td>Refrigerator</td><td><span class="pill crit">Critical</span></td><td>Never shed</td></tr>
-      <tr><td>Load 2</td><td>CFL</td><td><span class="pill crit">Critical</span></td><td>Never shed</td></tr>
-      <tr><td>Load 3</td><td>Tubelight</td><td><span class="pill flex">Flexible</span></td><td>3rd (highest priority)</td></tr>
-      <tr><td>Load 4</td><td>Ceiling fan</td><td><span class="pill flex">Flexible</span></td><td>2nd</td></tr>
-      <tr><td>Load 5</td><td>Air conditioner</td><td><span class="pill flex">Flexible</span></td><td>1st (lowest priority)</td></tr>
+      <tr><th>Load</th><th>Appliance</th><th>Type</th><th class="num">Range (kW)</th><th class="num">Shed penalty</th></tr>
+      <tr><td>Load 1</td><td>Refrigerator</td><td><span class="pill crit">Critical</span></td><td class="num">200</td><td class="num">never shed</td></tr>
+      <tr><td>Load 2</td><td>CFL</td><td><span class="pill crit">Critical</span></td><td class="num">0 – 30</td><td class="num">never shed</td></tr>
+      <tr><td>Load 3</td><td>Tubelight</td><td><span class="pill flex">Flexible</span></td><td class="num">0 – 52</td><td class="num">1000</td></tr>
+      <tr><td>Load 4</td><td>Ceiling fan</td><td><span class="pill flex">Flexible</span></td><td class="num">189 – 310</td><td class="num">17</td></tr>
+      <tr><td>Load 5</td><td>Air conditioner</td><td><span class="pill flex">Flexible</span></td><td class="num">130 – 500</td><td class="num">14</td></tr>
     </table></div>
   </div>
 </section>
@@ -145,75 +155,84 @@ footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
 <section id="method">
   <div class="wrap">
     <h2>Method</h2>
-    <h3>1 · Keep supply equal to demand</h3>
-    <p>At every instant the power delivered to the load must equal what the sources provide. The delivered load is the demand minus whatever was shed.</p>
-    <div class="eq">P<sub>ld</sub> = P<sub>PV</sub> + P<sub>BESS</sub> + P<sub>DG</sub> + P<sub>grid</sub> <small>(1)</small></div>
-    <div class="eq">P<sub>ld</sub> = P<sub>load</sub> − P<sub>shed</sub> <small>(2)</small></div>
+    <p>The EMS has two layers: an <b>optimizer</b> that plans ahead, and a <b>coordination layer</b> that turns the plan into set-points every moment.</p>
 
-    <h3>2 · Minimise cost, but charge a price for shedding</h3>
-    <p>Over a 24-hour horizon, the optimizer pays the generation cost C<sub>G</sub> for grid power and a shed penalty SP for every kW of flexible load it cuts. A weighted battery-energy term rewards keeping energy in storage.</p>
-    <div class="eq">OF = Σ<sub>t=0</sub><sup>T</sup> dt · ( C<sub>G</sub>·P<sub>grid</sub> + Σ<sub>i=1</sub><sup>m</sup> SP·P<sub>shed,i</sub> ) − W·E<sub>BESS</sub> <small>(3)</small></div>
-    <p>In plain terms: shedding one kW saves C<sub>G</sub> but costs SP, so a flexible load is cut only in hours when grid power is dearer than its penalty.</p>
+    <h3>Layer 1 · The optimizer (a linear program, re-solved every 5 minutes)</h3>
+    <p>At every 5-minute step the EMS looks ahead M = 241 steps (about 20 hours) using the forecast of grid price C(k), PV power P<sub>PV</sub>(k) and the five loads. It chooses, for every step k of that window:</p>
+    <ul>
+      <li>P<sub>grid</sub>(k) — power drawn from the grid (negative = export)</li>
+      <li>P<sub>BESS</sub>(k) — battery power (positive = discharge), and E<sub>BESS</sub>(k) — stored energy</li>
+      <li>P<sub>shed,3</sub>(k), P<sub>shed,4</sub>(k), P<sub>shed,5</sub>(k) — how much of each flexible load to switch off</li>
+    </ul>
+    <div class="eq">min &nbsp; Δt · Σ<sub>k</sub> [ C(k)·P<sub>grid</sub>(k) + SP<sub>3</sub>·P<sub>shed,3</sub>(k) + SP<sub>4</sub>·P<sub>shed,4</sub>(k) + SP<sub>5</sub>·P<sub>shed,5</sub>(k) ] − W·E<sub>BESS</sub>(M) <small>objective</small></div>
+    <div class="eq">P<sub>PV</sub>(k) + P<sub>grid</sub>(k) + P<sub>BESS</sub>(k) + Σ<sub>i</sub> P<sub>shed,i</sub>(k) = Σ<sub>i=1..5</sub> P<sub>load,i</sub>(k) <small>power balance</small></div>
+    <div class="eq">E<sub>BESS</sub>(1) = SOC·E<sub>rated</sub>, &nbsp; E<sub>BESS</sub>(k+1) = E<sub>BESS</sub>(k) − P<sub>BESS</sub>(k)·Δt <small>battery energy</small></div>
+    <div class="eq">−400 kW ≤ P<sub>BESS</sub> ≤ 400 kW, &nbsp; 20% ≤ SOC ≤ 80%, &nbsp; 0 ≤ P<sub>shed,i</sub>(k) ≤ P<sub>load,i</sub>(k) <small>limits</small></div>
+    <p>Here Δt = 5 min, the penalties are SP<sub>3</sub> = 1000, SP<sub>4</sub> = 17 and SP<sub>5</sub> = 14 (Rs/kWh), and W = 1 gives a small reward for energy left in the battery. Because grid power is unlimited, shedding one kW only pays when the grid price at that time is above that load's penalty — so the AC goes first (above 14 Rs/kWh), then the fan (above 17), and the tubelight effectively never.</p>
+    <p>Only the beginning of each plan is used: the battery follows the average of the first five planned steps, and the shed amounts of the first step are applied. Five minutes later the problem is solved again with the new battery state.</p>
 
-    <h3>3 · Constraints</h3>
-    <div class="eq">P<sub>shed,i</sub> = 0 &nbsp;for critical loads <small>(4)</small></div>
-    <div class="eq">0 ≤ P<sub>shed,i</sub>(t) ≤ P<sub>load,i</sub>(t) &nbsp;for flexible loads <small>(5)</small></div>
-    <div class="eq">20% ≤ SOC(t) ≤ 80% <small>(6)</small></div>
-    <div class="eq">P<sub>BESS</sub><sup>min</sup> ≤ P<sub>BESS</sub>(t) ≤ P<sub>BESS</sub><sup>max</sup>, &nbsp; E<sub>BESS</sub><sup>min</sup> ≤ E<sub>BESS</sub>(t) ≤ E<sub>BESS</sub><sup>max</sup> <small>(7–8)</small></div>
-
-    <h3>4 · Decision flow each time step</h3>
-    <div class="cards">
-      <div class="card"><b>① Is there spare solar?</b><p>If load &lt; PV, charge the battery or export the surplus to the grid.</p></div>
-      <div class="card"><b>② Is diesel cheaper than grid?</b><p>If the DG is connected and C<sub>DG</sub> &lt; C<sub>grid</sub>, the diesel generator runs.</p></div>
-      <div class="card"><b>③ Check battery SOC</b><p>At SOC<sub>min</sub>: import and charge. At SOC<sub>max</sub>: discharge. In between: charge or discharge as cost dictates.</p></div>
-      <div class="card"><b>④ Optimise the load</b><p>In every branch, flexible loads are trimmed during high import cost, lowest priority first.</p></div>
-    </div>
+    <h3>Layer 2 · Coordination of battery and diesel (grid-connected)</h3>
+    <ol class="steps">
+      <li>If PV + 400 kW ≥ 1200 kW, the diesel generator stays off and the battery follows the optimizer.</li>
+      <li>Otherwise the diesel generator runs when its fuel cost (70 Rs/L × 0.35 L/kWh = 24.5 Rs/kWh) is below the grid price and the operator allows it. Its set-point is 1200 kW − PV − battery power.</li>
+      <li>The battery's own protection blocks charging above 85% SOC and discharging below 19%, with 96% conversion efficiency.</li>
+      <li>The utility grid supplies the rest: P<sub>grid</sub> = delivered load − PV − battery − diesel.</li>
+    </ol>
+    <p>The grid tariff seen by the diesel decision and used for cost accounting is the optimizer's price plus 5 Rs/kWh (14 – 30 Rs/kWh over the day).</p>
   </div>
 </section>
 
-<section id="results">
+<section id="demo">
   <div class="wrap">
-    <h2>What the simulations showed</h2>
-    <p>The study was run in MATLAB/Simulink on the microgrid above with one-minute load data over 24 hours, comparing an existing cost-optimal EMS against the proposed one.</p>
-    <div class="cards">
-      <div class="card"><b>Existing EMS</b><p>During the evening price peak the diesel generator runs and its surplus is exported to the grid. All load is served.</p></div>
-      <div class="card"><b>Proposed EMS</b><p>The same peak triggers partial shedding of the AC (load 5) and ceiling fan (load 4). Critical loads stay fully supplied throughout.</p></div>
-      <div class="card"><b>Proposed EMS, no diesel</b><p>With demand control alone, the microgrid holds grid import close to zero at peak price — no fossil generation needed.</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="simulator">
-  <div class="wrap">
-    <h2>Interactive demo</h2>
-    <p class="lead">Switch between the three EMS cases and move the sliders to see how the shed penalty and diesel cost change the 24-hour schedule.</p>
+    <h2>Live optimization</h2>
+    <p class="lead">This runs the study's linear program in your browser with the HiGHS solver — 288 optimizations for one simulated day — on the same load, PV and price data used in MATLAB/Simulink. Change a parameter and run it again.</p>
 
     <div class="sim">
       <div class="panel">
-        <div class="seg" id="mode">
-          <button data-m="existing">Existing EMS<br><span class="hint">no load management</span></button>
-          <button data-m="proposed" class="on">Proposed EMS<br><span class="hint">priority-based shedding</span></button>
-          <button data-m="nodg">Proposed EMS, no diesel<br><span class="hint">DG removed</span></button>
+        <div class="seg" id="cases">
+          <button data-case="existing">Existing EMS<br><span class="hint">LP for the battery, no load shedding, diesel allowed</span></button>
+          <button data-case="proposed" class="on">Proposed EMS<br><span class="hint">LP with priority-based shedding, diesel allowed</span></button>
+          <button data-case="nodg">Proposed EMS, no diesel<br><span class="hint">LP with shedding, diesel not used</span></button>
         </div>
-        <label class="sl">Shed penalty SP (base) <output id="spV"></output>
-          <input type="range" id="sp" min="10" max="40" step="0.5" value="20"></label>
-        <p class="hint">Load 5 uses 1.0×SP, load 4 uses 1.15×SP, load 3 uses 1.8×SP — higher priority means a higher penalty.</p>
-        <label class="sl">Diesel cost C<sub>DG</sub> <output id="dgV"></output>
-          <input type="range" id="dg" min="14" max="35" step="0.5" value="20"></label>
-        <p class="hint">The DG runs whenever grid price exceeds this.</p>
+        <div class="fields">
+          <div class="sec">Shed penalties (Rs/kWh)</div>
+          <label for="sp3">Load 3 · tubelight</label><input id="sp3" type="number" step="1" min="0">
+          <label for="sp4">Load 4 · ceiling fan</label><input id="sp4" type="number" step="0.5" min="0">
+          <label for="sp5">Load 5 · AC</label><input id="sp5" type="number" step="0.5" min="0">
+          <div class="sec">Battery</div>
+          <label for="cap">Capacity (kWh)</label><input id="cap" type="number" step="100" min="100">
+          <label for="pmax">Max power (kW)</label><input id="pmax" type="number" step="50" min="0">
+          <label for="soc0">Starting SOC (%)</label><input id="soc0" type="number" step="1" min="20" max="80">
+          <div class="sec">Diesel</div>
+          <label for="dprice">Diesel price (Rs/L)</label><input id="dprice" type="number" step="1" min="0">
+        </div>
+        <div class="row">
+          <button class="btn" id="run">Run optimization</button>
+          <button class="btn alt" id="reset">Paper values</button>
+        </div>
+        <div class="status" id="status">Loading the solver…</div>
+        <div class="bar"><i id="prog"></i></div>
       </div>
-      <div>
+
+      <div class="stack">
         <div class="kpis" id="kpis"></div>
         <div class="panel"><div class="chartbox"><canvas id="cPower"></canvas></div></div>
-        <div class="panel" style="margin-top:14px"><div class="chartbox"><canvas id="cShed"></canvas></div></div>
-        <div class="panel" style="margin-top:14px"><div class="chartbox"><canvas id="cSoc"></canvas></div></div>
-        <div class="panel" style="margin-top:14px">
-          <b>All three cases at the current slider settings</b>
-          <div class="tablewrap"><table id="cmp"></table></div>
+        <div class="panel"><div class="chartbox"><canvas id="cShed"></canvas></div></div>
+        <div class="panel"><div class="chartbox"><canvas id="cSoc"></canvas></div></div>
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <b>The three cases at these settings</b>
+            <span class="row" style="margin:0"><button class="btn alt" id="compare">Compare all three</button><button class="btn alt" id="csv">Download results (CSV)</button></span>
+          </div>
+          <div class="tablewrap"><table id="cmp"><tr><td class="hint">Press “Compare all three” to run every case with the current settings.</td></tr></table></div>
         </div>
       </div>
     </div>
-    <div class="note"><b>About this demo.</b> It runs in your browser on 15-minute steps using load, solar and price curves traced approximately from the paper's figures, and a simplified rule-based dispatch that follows the decision flow above (battery capacity assumed 2000 kWh, starting at 50% SOC). It shows the behaviour of the method; the exact numbers in the paper come from the full MATLAB/Simulink study.</div>
+
+    <div class="note">
+      <b>What runs here, and what is simplified.</b>
+      The optimizer is the study's LP: same variables, objective, penalties, limits, 5-minute re-solve, 241-step horizon and data (<code>battSolarOptimize.m</code>). The coordination rules for the battery and diesel are those of the Simulink model. The three-phase electrical network of the Simulink model (phasor simulation) is replaced by a 1-minute power balance, so line losses, voltages and reactive power are not modelled, and the battery inverter responds instantly. Results can therefore differ slightly from the Simulink figures in the paper. If the measured battery state ever falls outside 20 – 80%, the LP has no feasible solution; as in the MATLAB code, the EMS then applies no battery action and no shedding for that 5-minute step (shown in the status line).
+    </div>
   </div>
 </section>
 
@@ -238,112 +257,313 @@ footer{padding:32px 0 48px;color:var(--muted);font-size:14px}
 
 <script>
 (() => {
-  const N = 96, dt = 0.25;                         // 15-minute steps over 24 h
-  const T = Array.from({length: N}, (_, i) => i * dt);
-  const lbl = T.map(t => t % 1 === 0 ? String(t).padStart(2,'0') + ':00' : '');
+'use strict';
+const D = window.EMS_DATA;
+if (!D) { document.getElementById('status').innerHTML = '<span class="err">data.js is missing — upload it next to index.html.</span>'; return; }
 
-  // smooth (cosine) interpolation between key points [hour, kW]
-  const curve = pts => t => {
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [a, va] = pts[i], [b, vb] = pts[i + 1];
-      if (t >= a && t <= b) { const w = (1 - Math.cos(Math.PI * (t - a) / (b - a))) / 2; return va + (vb - va) * w; }
+/* ------------------------------------------------------------------
+   1. PARAMETERS — values from initialConditions.m and the Simulink model
+   ------------------------------------------------------------------ */
+const PAPER = { sp3: 1000, sp4: 17, sp5: 14, cap: 2500, pmax: 400, soc0: 50, dprice: 70 };
+const FIXED = {
+  pvAreaEff: 2500 * 0.3,   // panelArea * panelEff  -> Ppv [W] = 750 * irradiance [W/m2]
+  socMin: 20, socMax: 80,  // LP energy limits (batteryMinMax.Emin / Emax)
+  socCutLo: 19, socCutHi: 85, eff: 0.96,   // BESS block: LimitVec [85 19], Efficiency 96 %
+  M: 241, nSolve: 288, dtOpt: 300,         // horizon, solves per day, optTime [s]
+  finalWeight: 1,                          // EnergyWeight in the MATLAB Function block
+  priceOffset: 5,                          // costDataOffset = costData + 5
+  PgMin: 1200,                             // Pg_min [kW], used by the coordination rule
+  fuelRate: 0.35,                          // fuel_eff_DGR [L/kWh]
+  dgAlpha: 0.246, dgBeta: 0.08145, dgRated: 1200,  // diesel consumption [L/h] = a*P + b*Prated
+  costFactor: 0.8,                         // Grid Cost Analysis: x80 / 100
+  nonGreen: 0.45, emGrid: 1.266, emDG: 3.15  // CO2: kg/kWh (grid) and kg/L (diesel)
+};
+const CASES = {
+  existing: { name: 'Existing EMS',            shed: false, dg: true  },
+  proposed: { name: 'Proposed EMS',            shed: true,  dg: true  },
+  nodg:     { name: 'Proposed EMS, no diesel', shed: true,  dg: false }
+};
+const NMIN = 1440;  // simulated minutes (data row i  <->  t = 60*(i+1) s)
+
+/* ------------------------------------------------------------------
+   2. FORECASTS — exactly as initialConditions.m builds them:
+      data(2:5:end), repeated for numDays = 2, window i:i+M-1
+   ------------------------------------------------------------------ */
+const sample2 = arr => { const s = []; for (let n = 0; n < FIXED.nSolve; n++) s.push(arr[1 + 5 * n]); return s.concat(s); };
+const F = {
+  price: sample2(D.price),
+  pv: sample2(D.irr.map(x => FIXED.pvAreaEff * x / 1000)),   // kW
+  l1: sample2(D.fridge), l2: sample2(D.cfl), l3: sample2(D.tube), l4: sample2(D.fan), l5: sample2(D.ac)
+};
+
+/* ------------------------------------------------------------------
+   3. THE LP (battSolarOptimize.m), written in CPLEX-LP format for HiGHS.
+      Units scaled to kW / kWh / h; this multiplies the MATLAB objective
+      (W, J, s) by a constant, so the optimal decisions are identical.
+      Names: PG grid, PB battery, SB stored energy, S3/S4/S5 shed.
+   ------------------------------------------------------------------ */
+const num = x => { const v = +x.toPrecision(12); return (Object.is(v, -0) ? 0 : v).toString(); };
+const term = (c, v) => (c < 0 ? '- ' + num(-c) : '+ ' + num(c)) + ' ' + v;
+
+function buildLP(j, Einit, p, shed) {
+  const M = FIXED.M, dt = FIXED.dtOpt / 3600, r0 = Math.max(j, 1) - 1;   // forecast row used at solve j
+  const cap = p.cap, Emin = FIXED.socMin / 100 * cap, Emax = FIXED.socMax / 100 * cap;
+  const obj = [], cons = [], bnd = [];
+  for (let k = 0; k < M; k++) {
+    const r = r0 + k;
+    obj.push(term(dt * F.price[r], 'PG' + k));
+    if (shed) obj.push(term(dt * p.sp3, 'S3_' + k), term(dt * p.sp4, 'S4_' + k), term(dt * p.sp5, 'S5_' + k));
+    const load = F.l1[r] + F.l2[r] + F.l3[r] + F.l4[r] + F.l5[r];
+    cons.push(` BAL${k}: PG${k} + PB${k}` + (shed ? ` + S3_${k} + S4_${k} + S5_${k}` : '') + ` = ${num(load - F.pv[r])}`);
+    if (k > 0) cons.push(` DYN${k}: SB${k} - SB${k - 1} + ${num(dt)} PB${k - 1} = 0`);
+    bnd.push(` PG${k} free`, ` ${num(-p.pmax)} <= PB${k} <= ${num(p.pmax)}`, ` ${num(Emin)} <= SB${k} <= ${num(Emax)}`);
+    if (shed) bnd.push(` 0 <= S3_${k} <= ${num(F.l3[r])}`, ` 0 <= S4_${k} <= ${num(F.l4[r])}`, ` 0 <= S5_${k} <= ${num(F.l5[r])}`);
+  }
+  obj.push(term(-FIXED.finalWeight, 'SB' + (M - 1)));
+  cons.push(` INIT: SB0 = ${num(Einit)}`);
+  return ['Minimize', ' obj: ' + obj.join(' '), 'Subject To', ...cons, 'Bounds', ...bnd, 'End'].join('\n');
+}
+
+/* ------------------------------------------------------------------
+   4. HiGHS solver (highs-js, WebAssembly) loaded from jsDelivr
+   ------------------------------------------------------------------ */
+const HIGHS_BASE = 'https://cdn.jsdelivr.net/npm/highs@1.8.0/build/';
+let highsPromise = null;
+function loadHighs(fresh) {
+  if (highsPromise && !fresh) return highsPromise;
+  highsPromise = (async () => {
+    let loader = null;
+    try {   // evaluate the UMD bundle with a CommonJS shim, so we do not depend on its global name
+      const code = await (await fetch(HIGHS_BASE + 'highs.js')).text();
+      const mod = { exports: {} };
+      new Function('module', 'exports', code)(mod, mod.exports);
+      loader = typeof mod.exports === 'function' ? mod.exports : mod.exports.default;
+    } catch (e) { console.warn('HiGHS shim load failed, trying script tag', e); }
+    if (typeof loader !== 'function') {
+      try {
+        await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = HIGHS_BASE + 'highs.js'; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+        loader = window.Module;
+      } catch (e) { console.warn('HiGHS script tag failed', e); }
     }
-    return pts[pts.length - 1][1];
-  };
+    if (typeof loader !== 'function') {   // last resort: the bundle may be an ES module
+      try { const m = await import(HIGHS_BASE + 'highs.js'); loader = m.default || m.Module; } catch (e) { console.warn(e); }
+    }
+    if (typeof loader !== 'function') throw new Error('the HiGHS solver could not be started');
+    return loader({ locateFile: f => HIGHS_BASE + f });
+  })();
+  return highsPromise;
+}
+async function solveLP(text) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { const h = await loadHighs(attempt > 0); return h.solve(text, { presolve: 'on' }); }
+    catch (e) { if (attempt === 1) throw e; }
+  }
+}
 
-  // Loads traced approximately from Fig. 3 / Fig. 8 of the paper (kW)
-  const LOADS = [
-    {name:'Load 1 · Fridge',      critical:true,  f:() => 200},
-    {name:'Load 2 · CFL',         critical:true,  f:curve([[0,0],[6,0],[7,10],[9,20],[10,19],[12,25],[14,10],[16,20],[18,30],[20,20],[22,12],[24,9]])},
-    {name:'Load 3 · Tubelight',   critical:false, mult:1.8,  f:curve([[0,0],[5,0],[6,18],[8,22],[10,32],[12,40],[13,28],[15,15],[17,25],[19,35],[21,50],[22,50],[24,30]])},
-    {name:'Load 4 · Ceiling fan', critical:false, mult:1.15, f:curve([[0,300],[3,250],[5,225],[8,190],[10,192],[12,240],[13,270],[15,230],[17,210],[20,250],[24,310]])},
-    {name:'Load 5 · AC',          critical:false, mult:1.0,  f:curve([[0,450],[3,370],[5,300],[7,220],[9,160],[11,135],[12,200],[14,320],[16,240],[18,180],[20,250],[22,380],[24,500]])},
+/* ------------------------------------------------------------------
+   5. ONE SIMULATED DAY: LP every 5 min + coordination + battery, 1-min steps
+   ------------------------------------------------------------------ */
+async function simulateDay(caseKey, p, onProgress) {
+  const C = CASES[caseKey], cap = p.cap, dtH = 1 / 60;
+  const R = { t: [], demand: [], served: [], pv: [], pb: [], dg: [], grid: [], soc: [], price: [], priceOff: [], s3: [], s4: [], s5: [] };
+  let E = p.soc0 / 100 * cap, soc = p.soc0;
+  let cmd = { pb: 0, s3: 0, s4: 0, s5: 0 }, lastJ = -1, solves = 0, infeasible = 0;
+  let prev = { pv: 0, pb: 0, priceOff: 0 };       // the coordination block reads 1-step-delayed signals
+  const K = { gridCost: 0, litres: 0, importKWh: 0, exportKWh: 0, shedKWh: 0, demandKWh: 0, pvKWh: 0, peakImport: 0, peakEveningImport: 0, co2Grid: 0 };
+
+  for (let i = 0; i < NMIN; i++) {
+    const tSec = 60 * (i + 1);
+    const j = Math.min(FIXED.nSolve - 1, Math.floor(tSec / FIXED.dtOpt));
+    if (j !== lastJ) {                     // a new 5-minute optimization
+      lastJ = j; solves++;
+      const sol = await solveLP(buildLP(j, soc / 100 * cap, p, C.shed));
+      if (sol && sol.Status === 'Optimal') {
+        const col = n => sol.Columns[n].Primal;
+        let s = 0; for (let k = 0; k < 5; k++) s += col('PB' + k);
+        cmd = { pb: s / 5, s3: C.shed ? col('S3_0') : 0, s4: C.shed ? col('S4_0') : 0, s5: C.shed ? col('S5_0') : 0 };
+      } else { cmd = { pb: 0, s3: 0, s4: 0, s5: 0 }; infeasible++; }   // exitflag <= 0 -> zeros, as in the MATLAB code
+      if (solves % 6 === 0) { onProgress(solves / FIXED.nSolve); await new Promise(r => setTimeout(r)); }
+    }
+
+    // loads: delivered = actual - shed (cannot go below zero)
+    const l3 = D.tube[i], l4 = D.fan[i], l5 = D.ac[i];
+    const d3 = Math.max(0, l3 - cmd.s3), d4 = Math.max(0, l4 - cmd.s4), d5 = Math.max(0, l5 - cmd.s5);
+    const demand = D.fridge[i] + D.cfl[i] + l3 + l4 + l5;
+    const served = D.fridge[i] + D.cfl[i] + d3 + d4 + d5;
+    const pv = FIXED.pvAreaEff * D.irr[i] / 1000;
+    const priceOff = D.price[i] + FIXED.priceOffset;
+
+    // coordination (grid-connected branch of the Coordinated Power Controller)
+    let dg = 0;
+    if (!(prev.pv + p.pmax >= FIXED.PgMin) && C.dg && p.dprice * FIXED.fuelRate < prev.priceOff) {
+      dg = Math.max(0, FIXED.PgMin - prev.pv - prev.pb);
+    }
+
+    // battery: power limit, SOC protection, efficiency
+    let pb = Math.max(-p.pmax, Math.min(p.pmax, cmd.pb));
+    if (soc >= FIXED.socCutHi && pb < 0) pb = 0;
+    if (soc <= FIXED.socCutLo && pb > 0) pb = 0;
+    E -= (pb > 0 ? pb / FIXED.eff : pb * FIXED.eff) * dtH;
+    soc = E / cap * 100;
+
+    const grid = served - pv - pb - dg;
+    R.t.push(tSec); R.demand.push(demand); R.served.push(served); R.pv.push(pv); R.pb.push(pb); R.dg.push(dg);
+    R.grid.push(grid); R.soc.push(soc); R.price.push(D.price[i]); R.priceOff.push(priceOff);
+    R.s3.push(l3 - d3); R.s4.push(l4 - d4); R.s5.push(l5 - d5);
+
+    K.gridCost += FIXED.costFactor * priceOff * grid * dtH;
+    if (dg > 0) K.litres += (FIXED.dgAlpha * dg + FIXED.dgBeta * FIXED.dgRated) * dtH;
+    if (grid > 0) { K.importKWh += grid * dtH; K.co2Grid += FIXED.nonGreen * FIXED.emGrid * grid * dtH; } else K.exportKWh -= grid * dtH;
+    K.shedKWh += (demand - served) * dtH; K.demandKWh += demand * dtH; K.pvKWh += pv * dtH;
+    K.peakImport = Math.max(K.peakImport, grid);
+    if (tSec >= 18 * 3600 && tSec <= 22 * 3600) K.peakEveningImport = Math.max(K.peakEveningImport, grid);
+    prev = { pv, pb, priceOff };
+  }
+  K.dieselCost = K.litres * p.dprice;
+  K.co2DG = K.litres * FIXED.emDG;
+  K.totalCost = K.gridCost + K.dieselCost;
+  K.dgKWh = R.dg.reduce((a, b) => a + b, 0) * dtH;
+  K.solves = solves; K.infeasible = infeasible; K.endSoc = soc;
+  onProgress(1);
+  return { R, K };
+}
+
+/* ------------------------------------------------------------------
+   6. USER INTERFACE
+   ------------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const fields = ['sp3', 'sp4', 'sp5', 'cap', 'pmax', 'soc0', 'dprice'];
+const setFields = v => fields.forEach(f => $(f).value = v[f]);
+const readFields = () => { const p = {}; fields.forEach(f => p[f] = parseFloat($(f).value)); return p; };
+const fmt = x => Math.round(x).toLocaleString('en-IN');
+const rs = x => (x < 0 ? '−₹ ' : '₹ ') + fmt(Math.abs(x));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const hhmm = s => `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}`;
+const labels = Array.from({ length: NMIN }, (_, i) => hhmm(60 * (i + 1)));
+
+Chart.defaults.font.family = 'Inter, sans-serif';
+Chart.defaults.color = css('--muted');
+Chart.defaults.borderColor = css('--line');
+const opts = (title, yTitle) => ({
+  responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { title: { display: true, text: title, color: css('--ink'), font: { size: 14, weight: '600' } },
+             legend: { labels: { boxWidth: 12 } },
+             tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y.toFixed(1)}` } } },
+  scales: { x: { ticks: { autoSkip: false, maxRotation: 0, callback: (v, i) => (60 * (i + 1)) % 10800 === 0 ? labels[i] : '' }, grid: { display: false } },
+            y: { title: { display: true, text: yTitle } } },
+  elements: { point: { radius: 0 }, line: { borderWidth: 1.8 } }
+});
+const ds = (label, color, extra = {}) => ({ label, data: [], borderColor: color, backgroundColor: color, ...extra });
+
+const cPower = new Chart($('cPower'), { type: 'line', data: { labels, datasets: [
+  ds('Demand', css('--muted'), { borderDash: [5, 4] }), ds('Delivered load', css('--accent')), ds('PV', css('--sun')),
+  ds('Battery (+ discharge)', css('--bess')), ds('Diesel', css('--dg')), ds('Grid (+ import / − export)', css('--grid'))] },
+  options: opts('Power flows over the day', 'kW') });
+const shedCol = ['#16a34a', '#f59e0b', '#dc2626'];
+const cShed = new Chart($('cShed'), { type: 'line', data: { labels, datasets:
+  ['Load 3 · tubelight', 'Load 4 · ceiling fan', 'Load 5 · AC'].map((n, k) => ds(n, shedCol[k], { fill: k === 0 ? 'origin' : '-1', backgroundColor: shedCol[k] + '66' })) },
+  options: (o => { o.scales.y.stacked = true; return o; })(opts('Load shed by the optimizer', 'kW')) });
+const cSoc = new Chart($('cSoc'), { type: 'line', data: { labels, datasets: [
+  ds('Battery SOC', css('--bess'), { yAxisID: 'y' }),
+  ds('Grid price + 5 (tariff)', css('--warn'), { yAxisID: 'y1' }),
+  ds('Price used by the LP', css('--warn'), { yAxisID: 'y1', borderDash: [4, 4], borderWidth: 1.2 })] },
+  options: (o => { o.scales.y.min = 0; o.scales.y.max = 100; o.scales.y.title.text = 'SOC (%)';
+    o.scales.y1 = { position: 'right', title: { display: true, text: 'Rs/kWh' }, grid: { drawOnChartArea: false } }; return o; })(opts('Battery state of charge and grid price', '%')) });
+
+let current = 'proposed', busy = false, lastResult = null;
+const cache = new Map();
+const key = (c, p) => c + JSON.stringify(p);
+
+function setBusy(b) { busy = b; ['run', 'compare', 'reset'].forEach(id => $(id).disabled = b); document.querySelectorAll('#cases button').forEach(x => x.disabled = b); }
+function status(msg, err) { $('status').innerHTML = err ? `<span class="err">${msg}</span>` : msg; }
+function progress(f) { $('prog').style.width = (100 * f).toFixed(0) + '%'; }
+
+function validate(p) {
+  if (fields.some(f => !isFinite(p[f]))) return 'Please fill in every field.';
+  if (p.soc0 < FIXED.socMin || p.soc0 > FIXED.socMax) return 'Starting SOC must be between 20 and 80 % (the LP limits).';
+  if (p.cap <= 0 || p.pmax < 0) return 'Battery capacity must be positive.';
+  return null;
+}
+
+async function runCase(c, p) {
+  const k = key(c, p);
+  if (cache.has(k)) return cache.get(k);
+  const t0 = performance.now();
+  const res = await simulateDay(c, p, f => { progress(f); status(`Solving ${CASES[c].name}: optimization ${Math.round(f * FIXED.nSolve)} of ${FIXED.nSolve}…`); });
+  res.seconds = (performance.now() - t0) / 1000;
+  cache.set(k, res);
+  return res;
+}
+
+function show(c, res) {
+  const { R, K } = res;
+  [R.demand, R.served, R.pv, R.pb, R.dg, R.grid].forEach((d, i) => cPower.data.datasets[i].data = d);
+  [R.s3, R.s4, R.s5].forEach((d, i) => cShed.data.datasets[i].data = d);
+  cSoc.data.datasets[0].data = R.soc; cSoc.data.datasets[1].data = R.priceOff; cSoc.data.datasets[2].data = R.price;
+  cPower.update(); cShed.update(); cSoc.update();
+  const tiles = [
+    [rs(K.gridCost), 'Grid cost for the day (net of export)'],
+    [rs(K.dieselCost), 'Diesel fuel cost'],
+    [`${fmt(K.shedKWh)} kWh`, `Load shed (${(100 * K.shedKWh / K.demandKWh).toFixed(1)}% of demand)`],
+    [`${fmt(K.peakEveningImport)} kW`, 'Max grid import, 18:00–22:00'],
+    [`${fmt(K.co2Grid + K.co2DG)} kg`, 'CO₂ (grid share + diesel)'],
+    [`${fmt(K.dgKWh)} kWh`, 'Diesel energy']
   ];
-  const pv = t => (t < 5 || t > 19) ? 0 : 760 * Math.sin(Math.PI * (t - 5) / 14);
-  const price = t => 14 + 1.2 * Math.exp(-(((t - 5.5) / 0.6) ** 2)) + 16 * Math.exp(-(((t - 20.5) / 1.3) ** 2)); // Rs/kWh
+  $('kpis').innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  lastResult = { c, res };
+  status(`${CASES[c].name}: ${K.solves} optimizations solved in ${res.seconds.toFixed(1)} s` +
+    (K.infeasible ? ` · <span class="err">${K.infeasible} infeasible (battery outside 20–80%) → no action for those steps</span>` : ' · all optimal'));
+}
 
-  const CAP = 2000, PB = 400, DGMAX = 1200, SOC0 = 50, HIGH = 18;
+async function runCurrent() {
+  if (busy) return;
+  const p = readFields(), e = validate(p);
+  if (e) return status(e, true);
+  setBusy(true);
+  try { show(current, await runCase(current, p)); }
+  catch (err) { console.error(err); status('The optimization could not run: ' + err.message + '. Check your internet connection and reload.', true); }
+  finally { setBusy(false); }
+}
 
-  function simulate(mode, SP, CDG) {
-    const shedOn = mode !== 'existing', dgOn = mode !== 'nodg';
-    let soc = SOC0;
-    const r = {pv:[], dg:[], bess:[], grid:[], demand:[], served:[], soc:[], price:[], shed:[[],[],[]], cost:0, shedE:0, dgE:0, peakImp:0, demE:0};
-    T.forEach(t => {
-      const p = price(t), s = pv(t);
-      let demand = 0, served = 0, fi = 0;
-      LOADS.forEach(L => {
-        const v = L.f(t); demand += v;
-        let shed = 0;
-        if (!L.critical) { if (shedOn && p > SP * L.mult) shed = v; r.shed[fi++].push(shed); }  // eqn (4),(5)
-        served += v - shed;
-      });
-      const dg = dgOn && p > CDG ? DGMAX : 0;                                                   // flowchart: C_DG < C_grid
-      let b = 0;                                                                                // + discharge, − charge
-      if (p >= HIGH && soc > 20)               b =  Math.min(PB, (soc - 20) / 100 * CAP / dt);
-      else if (t >= 9 && t < 17 && soc < 80)   b = -Math.min(PB, (80 - soc) / 100 * CAP / dt);
-      else if (s > served && soc < 80)         b = -Math.min(PB, s - served, (80 - soc) / 100 * CAP / dt);
-      soc -= b * dt / CAP * 100;                                                                // eqn (6)
-      const g = served - s - b - dg;                                                            // eqn (1)
-      r.pv.push(s); r.dg.push(dg); r.bess.push(b); r.grid.push(g); r.demand.push(demand); r.served.push(served); r.soc.push(soc); r.price.push(p);
-      r.cost += p * g * dt; r.shedE += (demand - served) * dt; r.dgE += dg * dt; r.demE += demand * dt;
-      if (p >= HIGH) r.peakImp = Math.max(r.peakImp, g);
-    });
-    return r;
-  }
+async function compareAll() {
+  if (busy) return;
+  const p = readFields(), e = validate(p);
+  if (e) return status(e, true);
+  setBusy(true);
+  try {
+    const rows = [];
+    for (const c of Object.keys(CASES)) rows.push([c, await runCase(c, p)]);
+    const base = rows[0][1].K.totalCost;
+    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">vs existing</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
+      rows.map(([c, { K }]) => `<tr${c === current ? ' style="font-weight:600"' : ''}><td>${CASES[c].name}</td><td class="num">${rs(K.gridCost)}</td><td class="num">${rs(K.dieselCost)}</td><td class="num">${rs(K.totalCost)}</td><td class="num">${c === 'existing' ? '—' : ((K.totalCost - base) / Math.abs(base) * 100).toFixed(1) + '%'}</td><td class="num">${fmt(K.co2Grid + K.co2DG)}</td><td class="num">${fmt(K.shedKWh)}</td><td class="num">${fmt(K.peakEveningImport)}</td></tr>`).join('');
+    show(current, cache.get(key(current, p)));
+  } catch (err) { console.error(err); status('The comparison could not run: ' + err.message, true); }
+  finally { setBusy(false); }
+}
 
-  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const fmt = x => Math.round(x).toLocaleString('en-IN');
-  Chart.defaults.font.family = 'Inter, sans-serif';
-  Chart.defaults.color = css('--muted');
-  Chart.defaults.borderColor = css('--line');
-  const base = (title, y) => ({responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
-    plugins:{title:{display:true, text:title, color:css('--ink'), font:{size:14, weight:'600'}}, legend:{labels:{boxWidth:12}},
-      tooltip:{callbacks:{title:i => { const t = T[i[0].dataIndex]; return `${String(Math.floor(t)).padStart(2,'0')}:${String(Math.round((t%1)*60)).padStart(2,'0')}`; }}}},
-    scales:{x:{ticks:{autoSkip:false, maxRotation:0, callback:(v,i) => i % 12 === 0 ? lbl[i] : ''}}, y:{title:{display:true, text:y}}}, elements:{point:{radius:0}, line:{borderWidth:2, tension:0.2}}});
+function downloadCSV() {
+  if (!lastResult) return;
+  const { c, res: { R } } = lastResult;
+  const head = 'time_s,demand_kW,delivered_kW,pv_kW,battery_kW,diesel_kW,grid_kW,soc_pct,price_lp_Rs_kWh,price_tariff_Rs_kWh,shed_load3_kW,shed_load4_kW,shed_load5_kW';
+  const lines = R.t.map((t, i) => [t, R.demand[i], R.served[i], R.pv[i], R.pb[i], R.dg[i], R.grid[i], R.soc[i], R.price[i], R.priceOff[i], R.s3[i], R.s4[i], R.s5[i]].map(v => +(+v).toFixed(4)).join(','));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([head + '\n' + lines.join('\n')], { type: 'text/csv' }));
+  a.download = `ems_${c}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
 
-  const ds = (label, color, extra={}) => ({label, data:[], borderColor:color, backgroundColor:color, ...extra});
-  const cPower = new Chart(document.getElementById('cPower'), {type:'line', data:{labels:lbl, datasets:[
-    ds('Demand', css('--muted'), {borderDash:[5,4]}), ds('Served load', css('--accent')), ds('PV', css('--sun')),
-    ds('Grid (+import / −export)', css('--grid')), ds('BESS (+discharge)', css('--bess')), ds('Diesel', css('--dg'))]}, options:base('Power flows over 24 h','kW')});
-  const shedColors = ['#16a34a', '#f59e0b', '#dc2626'];
-  const cShed = new Chart(document.getElementById('cShed'), {type:'line', data:{labels:lbl, datasets:
-    ['Load 3 · Tubelight','Load 4 · Ceiling fan','Load 5 · AC'].map((n,i) => ds(n + ' shed', shedColors[i], {fill:true, backgroundColor:shedColors[i] + '55'}))},
-    options:(o => { o.scales.y.stacked = true; return o; })(base('Load shed (flexible loads only)','kW'))});
-  const cSoc = new Chart(document.getElementById('cSoc'), {type:'line', data:{labels:lbl, datasets:[
-    ds('Battery SOC', css('--bess'), {yAxisID:'y'}), ds('Grid price', css('--warn'), {yAxisID:'y1'})]},
-    options:(o => { o.scales.y.min = 0; o.scales.y.max = 100; o.scales.y.title.text = 'SOC (%)';
-      o.scales.y1 = {position:'right', title:{display:true, text:'Rs/kWh'}, grid:{drawOnChartArea:false}}; return o; })(base('Battery state of charge and grid price','%'))});
+document.querySelectorAll('#cases button').forEach(b => b.addEventListener('click', () => {
+  if (busy) return;
+  document.querySelectorAll('#cases button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); current = b.dataset.case; runCurrent();
+}));
+$('run').addEventListener('click', runCurrent);
+$('compare').addEventListener('click', compareAll);
+$('csv').addEventListener('click', downloadCSV);
+$('reset').addEventListener('click', () => { setFields(PAPER); runCurrent(); });
 
-  let mode = 'proposed';
-  const sp = document.getElementById('sp'), dg = document.getElementById('dg');
-  const NAMES = {existing:'Existing EMS', proposed:'Proposed EMS', nodg:'Proposed, no diesel'};
-
-  function render() {
-    const SP = +sp.value, CDG = +dg.value;
-    document.getElementById('spV').textContent = SP + ' Rs/kWh';
-    document.getElementById('dgV').textContent = CDG + ' Rs/kWh';
-    const r = simulate(mode, SP, CDG);
-    [r.demand, r.served, r.pv, r.grid, r.bess, r.dg].forEach((d,i) => cPower.data.datasets[i].data = d);
-    cPower.data.datasets[5].hidden = mode === 'nodg';
-    r.shed.forEach((d,i) => cShed.data.datasets[i].data = d);
-    cSoc.data.datasets[0].data = r.soc; cSoc.data.datasets[1].data = r.price;
-    cPower.update(); cShed.update(); cSoc.update();
-
-    const k = [[`₹ ${fmt(r.cost)}`, 'Net grid cost (−ve = earned)'], [`${fmt(r.peakImp)} kW`, 'Max import at peak price'],
-               [`${fmt(r.shedE)} kWh`, 'Energy shed'], [`${fmt(r.dgE)} kWh`, 'Diesel energy']];
-    document.getElementById('kpis').innerHTML = k.map(([v,l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
-
-    const rows = Object.keys(NAMES).map(m => { const x = simulate(m, SP, CDG);
-      return `<tr${m === mode ? ' style="font-weight:600"' : ''}><td>${NAMES[m]}</td><td>₹ ${fmt(x.cost)}</td><td>${fmt(x.peakImp)} kW</td><td>${fmt(x.shedE)} kWh (${(100 * x.shedE / x.demE).toFixed(1)}%)</td><td>${fmt(x.dgE)} kWh</td></tr>`; });
-    document.getElementById('cmp').innerHTML = '<tr><th>Case</th><th>Net grid cost</th><th>Peak-price import</th><th>Energy shed</th><th>Diesel energy</th></tr>' + rows.join('');
-  }
-
-  document.querySelectorAll('#mode button').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('#mode button').forEach(x => x.classList.remove('on'));
-    b.classList.add('on'); mode = b.dataset.m; render();
-  }));
-  sp.addEventListener('input', render); dg.addEventListener('input', render);
-  render();
+setFields(PAPER);
+loadHighs().then(() => runCurrent()).catch(err => status('The HiGHS solver could not be loaded (' + err.message + '). Check your internet connection and reload.', true));
 })();
 </script>
 </body>
