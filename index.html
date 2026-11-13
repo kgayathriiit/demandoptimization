@@ -122,7 +122,7 @@ input:disabled{opacity:.45}
       </div>
       <div style="flex:1"><b>Solar PV</b>
         <div class="f"><label for="pvkw">Rating (kWp)</label><input id="pvkw" type="number" min="0" step="50"></div>
-        <p class="hint">Output = rating × irradiance ÷ 1000 W/m².</p></div>
+</div>
     </div>
     <div class="src">
       <div class="ic" style="background:color-mix(in srgb,var(--bess) 18%,transparent);color:var(--bess)">
@@ -130,8 +130,7 @@ input:disabled{opacity:.45}
       </div>
       <div style="flex:1"><b>Battery (BESS)</b>
         <div class="f"><label for="cap">Capacity (kWh)</label><input id="cap" type="number" min="100" step="100">
-          <label for="pmax">Max power (kW)</label><input id="pmax" type="number" min="0" step="50">
-          <label for="soc0">Starting SOC (%)</label><input id="soc0" type="number" min="20" max="80" step="1"></div></div>
+          <input id="pmax" type="hidden"><input id="soc0" type="hidden"></div></div>
     </div>
     <div class="src">
       <div class="ic" style="background:color-mix(in srgb,var(--dg) 16%,transparent);color:var(--dg)">
