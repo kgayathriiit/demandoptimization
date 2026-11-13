@@ -121,7 +121,7 @@ input:disabled{opacity:.45}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
       </div>
       <div style="flex:1"><b>Solar PV</b>
-        <div class="f"><label for="pvkw">Rating (kWp)</label><input id="pvkw" type="number" min="0" step="50"></div>
+        <div class="f"><label for="pvkw">Rating (kW)</label><input id="pvkw" type="number" min="0" step="50"></div>
 </div>
     </div>
     <div class="src">
@@ -454,7 +454,7 @@ function renderLoads() {
 }
 function updateDiagram() {
   const p = readFields(), nc = loads.filter(L => L.type === 'critical').length, nf = loads.length - nc;
-  $('dgmPV').textContent = `PV · ${isFinite(p.pvkw) ? fmt(p.pvkw) : '–'} kWp`;
+  $('dgmPV').textContent = `PV · ${isFinite(p.pvkw) ? fmt(p.pvkw) : '–'} kW`;
   $('dgmBESS').textContent = `BESS · ${isFinite(p.cap) ? fmt(p.cap) : '–'} kWh`;
   $('dgmDG').textContent = `Diesel · ${isFinite(p.dgkw) ? fmt(p.dgkw) : '–'} kW`;
   $('dgmLoads').textContent = `${loads.length} load${loads.length === 1 ? '' : 's'}`;
