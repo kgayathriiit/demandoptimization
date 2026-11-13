@@ -171,7 +171,7 @@ input:disabled{opacity:.45}
   <div class="sim">
     <div class="panel">
       <div class="seg" id="cases">
-        <button data-case="existing">Rule based<br><span class="hint">No load shedding, diesel allowed</span></button>
+        <button data-case="existing">No load shedding, diesel allowed</button>
         <button data-case="proposed" class="on">Optimized<br><span class="hint">Priority-based load shedding, diesel allowed</span></button>
         <button data-case="nodg">Optimized, no diesel<br><span class="hint">Priority-based load shedding, diesel not used</span></button>
       </div>
@@ -221,7 +221,7 @@ const FIXED = {
   nonGreen: 0.45, emGrid: 1.266, emDG: 3.15
 };
 const CASES = {
-  existing: { name: 'Rule based',          shed: false, dg: true  },
+  existing: { name: 'No load shedding',    shed: false, dg: true  },
   proposed: { name: 'Optimized',           shed: true,  dg: true  },
   nodg:     { name: 'Optimized, no diesel', shed: true,  dg: false }
 };
@@ -608,7 +608,7 @@ async function compareAll() {
     const rows = [];
     for (const c of Object.keys(CASES)) rows.push([c, await runCase(c, p, ls)]);
     const base = rows[0][1].K.totalCost;
-    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">vs rule based</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
+    $('cmp').innerHTML = '<tr><th>Case</th><th class="num">Grid cost</th><th class="num">Diesel cost</th><th class="num">Total cost</th><th class="num">Change in total cost</th><th class="num">CO₂ (kg)</th><th class="num">Load shed (kWh)</th><th class="num">Max import 18–22 h (kW)</th></tr>' +
       rows.map(([c, { K }]) => `<tr${c === current ? ' style="font-weight:600"' : ''}><td>${CASES[c].name}</td><td class="num">${rs(K.gridCost)}</td><td class="num">${rs(K.dieselCost)}</td><td class="num">${rs(K.totalCost)}</td><td class="num">${c === 'existing' ? '—' : ((K.totalCost - base) / Math.abs(base) * 100).toFixed(1) + '%'}</td><td class="num">${fmt(K.co2Grid + K.co2DG)}</td><td class="num">${fmt(K.shedKWh)}</td><td class="num">${fmt(K.peakEveningImport)}</td></tr>`).join('');
     show(current, cache.get(key(current, p, ls)));
   } catch (err) { console.error(err); status('The comparison could not run: ' + esc(err.message), true); }
