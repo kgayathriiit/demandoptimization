@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="data.js"></script>
 <style>
 :root{
@@ -82,6 +81,23 @@ input:disabled{opacity:.45}
 .chartbox{position:relative;height:290px}
 .stack>*+*{margin-top:14px}
 .err{color:var(--warn);font-weight:600}
+.spark{width:144px;height:30px;display:block}
+.usage{font-size:13px;color:var(--muted);white-space:nowrap;min-width:110px}
+tr.editor td{background:var(--bg);border-bottom:1px solid var(--line)}
+.ed{display:flex;flex-direction:column;gap:10px;padding:6px 0 8px}
+.seg2{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start}
+.seg2 button{font:inherit;font-size:13px;padding:5px 12px;border:0;background:var(--surface);color:var(--ink);cursor:pointer}
+.seg2 button.on{background:var(--accent);color:#fff;font-weight:600}
+.ed-grid{display:flex;flex-direction:column;gap:10px}
+.ed-grid.off{opacity:.45}
+.ed-f{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.ed-f input[type=number]{width:72px}
+.strip-wrap{flex-direction:column;align-items:stretch;gap:4px}
+.strip{display:grid;grid-template-columns:repeat(24,minmax(18px,1fr));gap:2px;touch-action:none;user-select:none;max-width:760px}
+.hcell{height:30px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--muted);font:inherit;font-size:10px;padding:0;cursor:pointer;display:flex;align-items:flex-end;justify-content:center}
+.hcell.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.hcell:disabled{cursor:default}
+.esum{margin-left:auto;font-weight:600;color:var(--ink)}
 /* ---------- hub-and-spoke microgrid figure ---------- */
 .mg{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 18px 14px}
 .hub-wrap{position:relative;height:640px}
@@ -255,17 +271,15 @@ input:disabled{opacity:.45}
   <div class="sub" id="loadsSec">Loads</div>
   <div class="panel">
     <div class="tablewrap"><table class="loads">
-      <thead><tr><th></th><th>Name</th><th>Type</th><th class="num">Shed penalty (Rs/kWh)</th><th>Load profile</th><th class="num">Peak</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Name</th><th>Type</th><th class="num">Shed penalty (Rs/kWh)</th><th>Daily usage</th><th class="num">Peak</th><th></th></tr></thead>
       <tbody id="loadRows"></tbody>
     </table></div>
     <div class="loadbar">
       <select id="newType" aria-label="Type of new load"><option value="flexible">Flexible</option><option value="critical">Critical</option></select>
       <button class="btn small" id="addLoad">+ Add load</button>
       <button class="btn alt small" id="resetLoads">Default 5 loads</button>
-      <button class="btn alt small" id="template">Download profile template</button>
     </div>
-    <p class="hint">Profile file (Excel or CSV): one column of load in kW for one day (for example 24 hourly or 1440 one-minute values), or time in column A and load in kW in column B. Values are spread evenly over 24 h. Without a file, a load uses its default profile. Critical loads are never shed; a flexible load is shed when the grid price is above its penalty.</p>
-    <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" hidden>
+    <p class="hint">Press “Edit usage” to say how much power a load draws and in which hours of the day it runs. The five default loads can also keep their measured daily curve. Critical loads are never shed; a flexible load is shed when the grid price is above its penalty.</p>
   </div>
 
   <!-- ===================== OPTIMIZATION ===================== -->
@@ -339,9 +353,18 @@ const DEFAULT_LOADS = [
   { name: 'Load 5',       type: 'flexible', sp: 14,   curve: 'ac' }
 ];
 let nextId = 1;
-const newLoad = o => ({ id: nextId++, name: o.name, type: o.type, sp: o.sp, curve: o.curve, upload: null });
+const newLoad = o => {
+  const sch = o.curve ? scheduleFromCurve(o.curve) : { kw: 50, hours: Array.from({ length: 24 }, (_, h) => h >= 9 && h < 18) };
+  return { id: nextId++, name: o.name, type: o.type, sp: o.sp, curve: o.curve, mode: o.curve ? 'default' : 'custom',
+           kw: sch.kw, hours: sch.hours, start: 9, dur: 9, open: false };
+};
 let loads = DEFAULT_LOADS.map(newLoad);
-const profileOf = L => L.upload ? L.upload.data : D[L.curve];
+const profileOf = L => {
+  if (L.mode === 'default' && L.curve) return D[L.curve];
+  const sig = L.kw + ':' + L.hours.map(Number).join('');
+  if (L._sig !== sig) { L._sig = sig; L._prof = scheduleProfile(L.kw, L.hours); }
+  return L._prof;
+};
 
 /* ------------------------------------------------------------------
    2. FORECASTS — as initialConditions.m: data(2:5:end), repeated for 2 days
@@ -490,39 +513,19 @@ async function simulateDay(caseKey, p, loadSet, onProgress) {
 }
 
 /* ------------------------------------------------------------------
-   6. LOAD PROFILE FILES (Excel / CSV via SheetJS)
+   6. LOAD USAGE — default curve, or power x hours of operation (24 h)
    ------------------------------------------------------------------ */
-function resample(vals) {   // spread n values evenly over 24 h, hold each over its interval
-  const n = vals.length;
-  return Array.from({ length: NPTS }, (_, i) => vals[Math.min(n - 1, Math.floor(i * n / NMIN))]);
-}
-async function readProfile(file) {
-  if (!window.XLSX) throw new Error('the Excel reader did not load; check your internet connection');
-  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, blankrows: false });
-  const isNum = v => typeof v === 'number' ? isFinite(v) : (typeof v === 'string' && v.trim() !== '' && isFinite(+v));
-  const width = Math.max(0, ...rows.map(r => r.length));
-  const numericCols = [];
-  for (let c = 0; c < width; c++) if (rows.filter(r => isNum(r[c])).length >= 2) numericCols.push(c);
-  if (!numericCols.length) throw new Error('no column of numbers was found');
-  const col = numericCols.length >= 2 ? numericCols[1] : numericCols[0];   // time in A, load in B -> use B
-  const vals = rows.filter(r => isNum(r[col])).map(r => +r[col]);
-  if (vals.length < 2) throw new Error('the file needs at least 2 load values');
-  if (vals.some(v => v < 0)) throw new Error('load values cannot be negative');
-  return resample(vals);
-}
-function downloadTemplate() {
-  let csv = 'hour,load_kW\n';
-  for (let h = 0; h < 24; h++) {
-    const seg = D.ac.slice(h * 60, h * 60 + 60);
-    csv += `${h},${(seg.reduce((a, b) => a + b, 0) / seg.length).toFixed(1)}\n`;
-  }
-  save(csv, 'load_profile_template.csv');
-}
 function save(text, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
   a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function hourOfRow(i) { return Math.floor((i + 1) / 60) % 24; }   // data row i <-> minute i+1 of the day
+function scheduleProfile(kw, hours) { return Array.from({ length: NPTS }, (_, i) => hours[hourOfRow(i)] ? kw : 0); }
+function hourlyMeans(pr) { const h = Array(24).fill(0), n = Array(24).fill(0); pr.forEach((v, i) => { h[hourOfRow(i)] += v; n[hourOfRow(i)]++; }); return h.map((s, k) => s / n[k]); }
+function scheduleFromCurve(curve) {    // a starting schedule that resembles the default curve
+  const hm = hourlyMeans(D[curve]), peak = Math.max(...hm);
+  return { kw: Math.round(peak), hours: hm.map(v => v >= 0.5 * peak) };
 }
 
 /* ------------------------------------------------------------------
@@ -541,19 +544,69 @@ const PALETTE = ['#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#9333ea', '#db2777
 
 const ICON_PLUG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5M15 3v5"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/></svg>';
 
+function sparkline(L) {
+  const hm = hourlyMeans(profileOf(L)), peak = Math.max(1e-9, ...hm), W = 144, H = 30;
+  const pts = hm.map((v, h) => [h * W / 23, H - 2 - (H - 4) * v / peak]);
+  const line = pts.map((p, k) => (k ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const col = L.type === 'critical' ? 'var(--crit-ink)' : 'var(--flex-ink)';
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${line} L${W} ${H} L0 ${H} Z" fill="${col}" opacity=".18"/><path d="${line}" fill="none" stroke="${col}" stroke-width="1.6"/></svg>`;
+}
+const onHours = L => L.hours.filter(Boolean).length;
+function usageText(L) {
+  if (L.mode === 'default') return 'Default curve';
+  const h = onHours(L);
+  return `${fmt(L.kw)} kW · ${h} h/day`;
+}
+function energyText(L) { return `${fmt(profileOf(L).slice(0, NMIN).reduce((a, b) => a + b, 0) / 60)} kWh/day`; }
+function hourOptions(sel) { return Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === sel ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join(''); }
+
+function editorRow(L) {
+  const custom = L.mode === 'custom';
+  const cells = L.hours.map((on, h) => `<button class="hcell${on ? ' on' : ''}" data-h="${h}" title="${String(h).padStart(2, '0')}:00–${String((h + 1) % 24).padStart(2, '0')}:00" aria-pressed="${on}" ${custom ? '' : 'disabled'}>${h % 3 === 0 ? h : ''}</button>`).join('');
+  return `<tr class="editor" data-id="${L.id}"><td></td><td colspan="6">
+    <div class="ed">
+      ${L.curve ? `<div class="seg2"><button data-act="mode" data-v="default" class="${custom ? '' : 'on'}">Default curve</button><button data-act="mode" data-v="custom" class="${custom ? 'on' : ''}">Set hours of use</button></div>` : ''}
+      <div class="ed-grid${custom ? '' : ' off'}">
+        <label class="ed-f">Power when on <span><input type="number" data-k="kw" min="0" step="5" value="${L.kw}" ${custom ? '' : 'disabled'}> kW</span></label>
+        <div class="ed-f">Runs from <select data-k="start" ${custom ? '' : 'disabled'}>${hourOptions(L.start)}</select> for <input type="number" data-k="dur" min="0" max="24" step="1" value="${L.dur}" ${custom ? '' : 'disabled'}> hours <button class="btn alt small" data-act="apply" ${custom ? '' : 'disabled'}>Apply</button></div>
+        <div class="ed-f strip-wrap"><span>Hours of use <i class="hint" style="margin:0">(click or drag to switch hours on or off)</i></span>
+          <div class="strip" data-strip="${L.id}">${cells}</div></div>
+        <div class="ed-f presets">
+          <button class="btn alt small" data-act="preset" data-v="0-24" ${custom ? '' : 'disabled'}>All day</button>
+          <button class="btn alt small" data-act="preset" data-v="6-18" ${custom ? '' : 'disabled'}>Daytime 06–18</button>
+          <button class="btn alt small" data-act="preset" data-v="18-24" ${custom ? '' : 'disabled'}>Evening 18–24</button>
+          <button class="btn alt small" data-act="preset" data-v="0-6" ${custom ? '' : 'disabled'}>Night 00–06</button>
+          <button class="btn alt small" data-act="preset" data-v="0-0" ${custom ? '' : 'disabled'}>Clear</button>
+          <span class="esum" data-esum="${L.id}">${custom ? `${onHours(L)} h/day · ${energyText(L)}` : `Default curve · ${energyText(L)}`}</span>
+        </div>
+      </div>
+    </div></td></tr>`;
+}
+
 function renderLoads() {
   $('loadRows').innerHTML = loads.map(L => {
-    const pr = profileOf(L), peak = Math.max(...pr);
+    const peak = Math.max(...profileOf(L));
     return `<tr data-id="${L.id}">
       <td><div class="lic ${L.type}" title="${L.type}">${ICON_PLUG}</div></td>
       <td><input type="text" data-k="name" value="${esc(L.name)}" aria-label="Load name"></td>
       <td><select data-k="type" aria-label="Load type"><option value="critical"${L.type === 'critical' ? ' selected' : ''}>Critical</option><option value="flexible"${L.type === 'flexible' ? ' selected' : ''}>Flexible</option></select></td>
       <td class="num"><input type="number" data-k="sp" min="0" step="0.5" value="${L.type === 'flexible' ? L.sp : ''}" ${L.type === 'critical' ? 'disabled placeholder="—"' : ''} aria-label="Shed penalty"></td>
-      <td><div class="prof"><span class="peak">${L.upload ? 'File: ' + esc(L.upload.name) : 'Default'}</span><button class="btn alt small" data-act="upload">Upload file</button>${L.upload ? '<button class="btn alt small" data-act="clearfile">Use default</button>' : ''}</div></td>
-      <td class="num peak">${fmt(peak)} kW</td>
-      <td><button class="del" data-act="remove" title="Remove load" aria-label="Remove ${esc(L.name)}">×</button></td></tr>`;
+      <td><div class="prof"><span data-spark="${L.id}">${sparkline(L)}</span><span class="usage" data-sum="${L.id}">${usageText(L)}</span>
+        <button class="btn alt small" data-act="toggle" aria-expanded="${!!L.open}">${L.open ? 'Done' : 'Edit usage'}</button></div></td>
+      <td class="num peak" data-peak="${L.id}">${fmt(peak)} kW</td>
+      <td><button class="del" data-act="remove" title="Remove load" aria-label="Remove ${esc(L.name)}">×</button></td></tr>` + (L.open ? editorRow(L) : '');
   }).join('');
   updateDiagram();
+}
+function refreshRow(L) {     // update a load's previews without rebuilding the table (keeps focus while typing / dragging)
+  const q = s => $('loadRows').querySelector(s);
+  q(`[data-spark="${L.id}"]`).innerHTML = sparkline(L);
+  q(`[data-sum="${L.id}"]`).textContent = usageText(L);
+  q(`[data-peak="${L.id}"]`).textContent = `${fmt(Math.max(...profileOf(L)))} kW`;
+  const es = q(`[data-esum="${L.id}"]`);
+  if (es) es.textContent = L.mode === 'custom' ? `${onHours(L)} h/day · ${energyText(L)}` : `Default curve · ${energyText(L)}`;
+  const strip = q(`[data-strip="${L.id}"]`);
+  if (strip) strip.querySelectorAll('.hcell').forEach(c => { const on = L.hours[+c.dataset.h]; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
 }
 function updateDiagram() {
   const nc = loads.filter(L => L.type === 'critical').length, nf = loads.length - nc;
@@ -562,46 +615,62 @@ function updateDiagram() {
   $('loadChips').innerHTML = loads.map(L => `<span class="chip ${L.type}">${esc(L.name)}</span>`).join('');
 }
 const findLoad = el => loads.find(L => L.id === +el.closest('tr').dataset.id);
+const setRange = (L, a, b) => { L.hours = L.hours.map((_, h) => b > a ? (h >= a && h < b) : b < a ? (h >= a || h < b) : false); };
 
 $('loadRows').addEventListener('input', e => {
   const L = findLoad(e.target), k = e.target.dataset.k;
   if (!L || !k) return;
   if (k === 'name') { L.name = e.target.value; updateDiagram(); }
   if (k === 'sp') L.sp = parseFloat(e.target.value);
+  if (k === 'kw') { const v = parseFloat(e.target.value); if (v >= 0) { L.kw = v; refreshRow(L); } }
+  if (k === 'dur') L.dur = Math.max(0, Math.min(24, parseInt(e.target.value, 10) || 0));
 });
 $('loadRows').addEventListener('change', e => {
   const L = findLoad(e.target), k = e.target.dataset.k;
   if (!L || !k) return;
   if (k === 'type') { L.type = e.target.value; if (L.type === 'flexible' && !(L.sp > 0)) L.sp = 15; renderLoads(); }
+  if (k === 'start') L.start = +e.target.value;
 });
-let uploadTarget = null;
 $('loadRows').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  const L = findLoad(b);
-  if (b.dataset.act === 'remove') {
+  const b = e.target.closest('button'); if (!b || b.classList.contains('hcell')) return;
+  const L = findLoad(b); if (!L) return;
+  const act = b.dataset.act;
+  if (act === 'remove') {
     if (loads.length === 1) return status('Keep at least one load.', true);
     loads = loads.filter(x => x !== L); renderLoads();
   }
-  if (b.dataset.act === 'clearfile') { L.upload = null; renderLoads(); }
-  if (b.dataset.act === 'upload') { uploadTarget = L; $('fileIn').value = ''; $('fileIn').click(); }
+  if (act === 'toggle') { L.open = !L.open; renderLoads(); }
+  if (act === 'mode') { L.mode = b.dataset.v; renderLoads(); }
+  if (act === 'apply') { if (L.dur >= 24) L.hours = Array(24).fill(true); else setRange(L, L.start, (L.start + L.dur) % 24); refreshRow(L); }
+  if (act === 'preset') { const [a, z] = b.dataset.v.split('-').map(Number); if (z === 24 && a === 0) L.hours = Array(24).fill(true); else setRange(L, a, z % 24); refreshRow(L); }
 });
-$('fileIn').addEventListener('change', async () => {
-  const file = $('fileIn').files[0];
-  if (!file || !uploadTarget) return;
-  try {
-    const data = await readProfile(file);
-    uploadTarget.upload = { name: file.name, data, sig: file.name + ':' + data.reduce((a, b) => a + b, 0).toFixed(3) };
-    renderLoads();
-    status(`Profile for “${esc(uploadTarget.name)}” loaded from ${esc(file.name)} (peak ${fmt(Math.max(...data))} kW). Press “Run optimization”.`);
-  } catch (err) { status(`Could not read ${esc(file.name)}: ${esc(err.message)}.`, true); }
+/* click or drag across the 24-hour strip */
+let painting = null;
+$('loadRows').addEventListener('pointerdown', e => {
+  const c = e.target.closest('.hcell'); if (!c || c.disabled) return;
+  e.preventDefault();
+  const L = findLoad(c), h = +c.dataset.h;
+  painting = { L, val: !L.hours[h] };
+  L.hours[h] = painting.val; refreshRow(L);
+});
+$('loadRows').addEventListener('pointerover', e => {
+  if (!painting) return;
+  const c = e.target.closest('.hcell'); if (!c || c.disabled) return;
+  const L = findLoad(c); if (L !== painting.L) return;
+  const h = +c.dataset.h;
+  if (L.hours[h] !== painting.val) { L.hours[h] = painting.val; refreshRow(L); }
+});
+window.addEventListener('pointerup', () => { painting = null; });
+$('loadRows').addEventListener('keydown', e => {   // keyboard: Enter / Space on an hour toggles it
+  const c = e.target.closest('.hcell'); if (!c || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault(); const L = findLoad(c), h = +c.dataset.h; L.hours[h] = !L.hours[h]; refreshRow(L);
 });
 $('addLoad').addEventListener('click', () => {
   const type = $('newType').value;
-  loads.push(newLoad({ name: `Load ${loads.length + 1}`, type, sp: type === 'flexible' ? 15 : 0, curve: 'fan' }));
-  renderLoads();
+  const L = newLoad({ name: `Load ${loads.length + 1}`, type, sp: type === 'flexible' ? 15 : 0, curve: null });
+  L.open = true; loads.push(L); renderLoads();
 });
 $('resetLoads').addEventListener('click', () => { loads = DEFAULT_LOADS.map(newLoad); renderLoads(); });
-$('template').addEventListener('click', downloadTemplate);
 srcFields.forEach(f => $(f).addEventListener('input', updateDiagram));
 
 /* charts */
@@ -634,7 +703,7 @@ const cSoc = new Chart($('cSoc'), { type: 'line', data: { labels, datasets: [
 
 let current = 'proposed', busy = false, lastResult = null;
 const cache = new Map();
-const key = (c, p, ls) => c + JSON.stringify(p) + JSON.stringify(ls.map(L => [L.type, L.type === 'flexible' ? L.sp : 0, L.upload ? L.upload.sig : L.curve]));
+const key = (c, p, ls) => c + JSON.stringify(p) + JSON.stringify(ls.map(L => [L.type, L.type === 'flexible' ? L.sp : 0, L.mode === 'default' ? L.curve : L.kw + ':' + L.hours.map(Number).join('')]));
 
 function setBusy(b) {
   busy = b;
