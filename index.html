@@ -181,7 +181,7 @@ tr.editor td{background:var(--bg);border-bottom:1px solid var(--line)}
           <div class="u-name">Solar PV</div>
           <div class="u-val" id="v-pv">–</div>
           <div class="u-state" id="s-pv">Run to see power</div>
-          <label class="fld"><span>Rating (kW)</span><input id="pvkw" type="number" min="0" step="50"></label>
+          <label class="fld"><span>Rating (kW)</span><input id="pvkw" type="number" min="0" step="0.25"></label>
         </div>
       </div>
 
@@ -231,7 +231,7 @@ tr.editor td{background:var(--bg);border-bottom:1px solid var(--line)}
           <div class="u-name">Battery (BESS)</div>
           <div class="u-val" id="v-bess">–</div>
           <div class="u-state" id="s-bess">Run to see power</div>
-          <label class="fld"><span>Capacity (kWh)</span><input id="cap" type="number" min="100" step="100"></label>
+          <label class="fld"><span>Capacity (kWh)</span><input id="cap" type="number" min="0.5" step="0.5"></label>
           <input id="pmax" type="hidden"><input id="soc0" type="hidden">
         </div>
         <div class="socbar" title="State of charge"><i id="socFill"></i></div>
@@ -253,7 +253,7 @@ tr.editor td{background:var(--bg);border-bottom:1px solid var(--line)}
           <div class="u-name">Diesel generator</div>
           <div class="u-val" id="v-dg">–</div>
           <div class="u-state" id="s-dg">Run to see power</div>
-          <label class="fld"><span>Rating (kW)</span><input id="dgkw" type="number" min="0" step="100"></label>
+          <label class="fld"><span>Rating (kW)</span><input id="dgkw" type="number" min="0" step="0.1"></label>
           <label class="fld"><span>Price (Rs/L)</span><input id="dprice" type="number" min="0" step="1"></label>
         </div>
       </div>
@@ -275,9 +275,9 @@ tr.editor td{background:var(--bg);border-bottom:1px solid var(--line)}
       <tbody id="loadRows"></tbody>
     </table></div>
     <div class="loadbar">
-      <select id="newType" aria-label="Type of new load"><option value="flexible">Flexible</option><option value="critical">Critical</option></select>
+      <select id="newType" aria-label="Appliance to add"></select>
       <button class="btn small" id="addLoad">+ Add load</button>
-      <button class="btn alt small" id="resetLoads">Default 5 loads</button>
+      <button class="btn alt small" id="resetLoads">Default 5 appliances</button>
     </div>
     <p class="hint">Press “Edit usage” to say how much power a load draws and in which hours of the day it runs. The five default loads can also keep their measured daily curve. Critical loads are never shed; a flexible load is shed when the grid price is above its penalty.</p>
   </div>
@@ -324,7 +324,10 @@ if (!D) { $('status').innerHTML = '<span class="err">data.js is missing — uplo
 /* ------------------------------------------------------------------
    1. PARAMETERS — defaults from initialConditions.m and the Simulink model
    ------------------------------------------------------------------ */
-const PAPER = { pvkw: 750, cap: 2500, pmax: 400, soc0: 50, dgkw: 1200, dprice: 70 };   // 750 kWp = 2500 m2 x 0.3
+// One house = the study's 1000-household microgrid divided by 1000. Every power, energy and cost term of
+// the LP and of the rules is linear, so the optimizer takes exactly the same decisions, 1000x smaller.
+const SCALE = 1 / 1000;
+const PAPER = { pvkw: 0.75, cap: 2.5, pmax: 0.4, soc0: 50, dgkw: 1.2, dprice: 70 };   // kW, kWh, kW, %, kW, Rs/L
 const FIXED = {
   socMin: 20, socMax: 80,                  // LP energy limits
   socCutLo: 19, socCutHi: 85, eff: 0.96,   // BESS block protection and efficiency
@@ -345,22 +348,40 @@ const NMIN = 1440, NPTS = 1441;   // data row i  <->  t = 60*(i+1) s
 
 /* default appliance curves (kW) and the five default loads */
 const CURVES = { fridge: 'Refrigerator curve', cfl: 'CFL curve', tube: 'Tubelight curve', fan: 'Ceiling fan curve', ac: 'AC curve' };
+const HOUSE = {};   // per-house default curves (kW), filled after the data checks
+['fridge', 'cfl', 'tube', 'fan', 'ac'].forEach(k => { HOUSE[k] = D[k].map(v => v * SCALE); });
+/* appliances offered by "+ Add load": power (W), type, penalty, usual hours [start, duration] */
+const APPLIANCES = {
+  fan:     { name: 'Ceiling fan',      w: 75,   type: 'flexible', sp: 17, on: [[0, 7], [20, 4]] },
+  led:     { name: 'LED lights',       w: 60,   type: 'critical', sp: 0,  on: [[18, 6]] },
+  tv:      { name: 'Television',       w: 120,  type: 'flexible', sp: 15, on: [[19, 4]] },
+  ac:      { name: 'Air conditioner',  w: 1500, type: 'flexible', sp: 14, on: [[22, 2], [0, 6]] },
+  fridge:  { name: 'Refrigerator',     w: 150,  type: 'critical', sp: 0,  on: [[0, 24]] },
+  wm:      { name: 'Washing machine',  w: 500,  type: 'flexible', sp: 14, on: [[10, 1]] },
+  geyser:  { name: 'Water heater',     w: 2000, type: 'flexible', sp: 14, on: [[6, 1]] },
+  pump:    { name: 'Water pump',       w: 750,  type: 'flexible', sp: 14, on: [[7, 1]] },
+  iron:    { name: 'Iron',             w: 1000, type: 'flexible', sp: 14, on: [[8, 1]] },
+  micro:   { name: 'Microwave',        w: 1200, type: 'flexible', sp: 15, on: [[20, 1]] },
+  ev:      { name: 'EV charger',       w: 3300, type: 'flexible', sp: 14, on: [[20, 4]] },
+  wifi:    { name: 'Wi-Fi router',     w: 10,   type: 'critical', sp: 0,  on: [[0, 24]] },
+  custom:  { name: 'Load',             w: 100,  type: 'flexible', sp: 15, on: [[9, 9]] }
+};
 const DEFAULT_LOADS = [
-  { name: 'Load 1', type: 'critical', sp: 0,    curve: 'fridge' },
-  { name: 'Load 2',       type: 'critical', sp: 0,    curve: 'cfl' },
-  { name: 'Load 3',       type: 'flexible', sp: 1000, curve: 'tube' },
-  { name: 'Load 4',       type: 'flexible', sp: 17,   curve: 'fan' },
-  { name: 'Load 5',       type: 'flexible', sp: 14,   curve: 'ac' }
+  { name: 'Refrigerator',    type: 'critical', sp: 0,    curve: 'fridge' },
+  { name: 'CFL lights',      type: 'critical', sp: 0,    curve: 'cfl' },
+  { name: 'Tube lights',     type: 'flexible', sp: 1000, curve: 'tube' },
+  { name: 'Ceiling fans',    type: 'flexible', sp: 17,   curve: 'fan' },
+  { name: 'Air conditioner', type: 'flexible', sp: 14,   curve: 'ac' }
 ];
 let nextId = 1;
 const newLoad = o => {
-  const sch = o.curve ? scheduleFromCurve(o.curve) : { kw: 50, hours: Array.from({ length: 24 }, (_, h) => h >= 9 && h < 18) };
+  const sch = o.curve ? scheduleFromCurve(o.curve) : { kw: 0.1, hours: Array.from({ length: 24 }, (_, h) => h >= 9 && h < 18) };
   return { id: nextId++, name: o.name, type: o.type, sp: o.sp, curve: o.curve, mode: o.curve ? 'default' : 'custom',
            kw: sch.kw, hours: sch.hours, start: 9, dur: 9, open: false };
 };
 let loads = DEFAULT_LOADS.map(newLoad);
 const profileOf = L => {
-  if (L.mode === 'default' && L.curve) return D[L.curve];
+  if (L.mode === 'default' && L.curve) return HOUSE[L.curve];
   const sig = L.kw + ':' + L.hours.map(Number).join('');
   if (L._sig !== sig) { L._sig = sig; L._prof = scheduleProfile(L.kw, L.hours); }
   return L._prof;
@@ -524,8 +545,8 @@ function hourOfRow(i) { return Math.floor((i + 1) / 60) % 24; }   // data row i 
 function scheduleProfile(kw, hours) { return Array.from({ length: NPTS }, (_, i) => hours[hourOfRow(i)] ? kw : 0); }
 function hourlyMeans(pr) { const h = Array(24).fill(0), n = Array(24).fill(0); pr.forEach((v, i) => { h[hourOfRow(i)] += v; n[hourOfRow(i)]++; }); return h.map((s, k) => s / n[k]); }
 function scheduleFromCurve(curve) {    // a starting schedule that resembles the default curve
-  const hm = hourlyMeans(D[curve]), peak = Math.max(...hm);
-  return { kw: Math.round(peak), hours: hm.map(v => v >= 0.5 * peak) };
+  const hm = hourlyMeans(HOUSE[curve]), peak = Math.max(...hm);
+  return { kw: Math.round(peak * 1000) / 1000, hours: hm.map(v => v >= 0.5 * peak) };
 }
 
 /* ------------------------------------------------------------------
@@ -535,7 +556,10 @@ const srcFields = ['pvkw', 'cap', 'pmax', 'soc0', 'dgkw', 'dprice'];
 const setFields = v => srcFields.forEach(f => $(f).value = v[f]);
 const readFields = () => { const p = {}; srcFields.forEach(f => p[f] = parseFloat($(f).value)); return p; };
 const fmt = x => Math.round(x).toLocaleString('en-IN');
-const rs = x => (x < 0 ? '−₹ ' : '₹ ') + fmt(Math.abs(x));
+const rs = x => (x < 0 ? '−₹ ' : '₹ ') + dec(Math.abs(x), Math.abs(x) < 100 ? 2 : 0);
+const dec = (x, d) => (+x).toLocaleString('en-IN', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const pw = x => Math.abs(x) < 1 ? `${fmt(x * 1000)} W` : `${dec(x, 2)} kW`;          // power, given in kW
+const en = x => Math.abs(x) < 1 ? `${fmt(x * 1000)} Wh` : `${dec(x, 2)} kWh`;        // energy, given in kWh
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const hhmm = s => `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}`;
@@ -555,9 +579,9 @@ const onHours = L => L.hours.filter(Boolean).length;
 function usageText(L) {
   if (L.mode === 'default') return 'Default curve';
   const h = onHours(L);
-  return `${fmt(L.kw)} kW · ${h} h/day`;
+  return `${pw(L.kw)} · ${h} h/day`;
 }
-function energyText(L) { return `${fmt(profileOf(L).slice(0, NMIN).reduce((a, b) => a + b, 0) / 60)} kWh/day`; }
+function energyText(L) { return `${en(profileOf(L).slice(0, NMIN).reduce((a, b) => a + b, 0) / 60)}/day`; }
 function hourOptions(sel) { return Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === sel ? ' selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join(''); }
 
 function editorRow(L) {
@@ -567,7 +591,7 @@ function editorRow(L) {
     <div class="ed">
       ${L.curve ? `<div class="seg2"><button data-act="mode" data-v="default" class="${custom ? '' : 'on'}">Default curve</button><button data-act="mode" data-v="custom" class="${custom ? 'on' : ''}">Set hours of use</button></div>` : ''}
       <div class="ed-grid${custom ? '' : ' off'}">
-        <label class="ed-f">Power when on <span><input type="number" data-k="kw" min="0" step="5" value="${L.kw}" ${custom ? '' : 'disabled'}> kW</span></label>
+        <label class="ed-f">Power when on <span><input type="number" data-k="kw" min="0" step="5" value="${+(L.kw * 1000).toFixed(1)}" ${custom ? '' : 'disabled'}> W</span></label>
         <div class="ed-f">Runs from <select data-k="start" ${custom ? '' : 'disabled'}>${hourOptions(L.start)}</select> for <input type="number" data-k="dur" min="0" max="24" step="1" value="${L.dur}" ${custom ? '' : 'disabled'}> hours <button class="btn alt small" data-act="apply" ${custom ? '' : 'disabled'}>Apply</button></div>
         <div class="ed-f strip-wrap"><span>Hours of use <i class="hint" style="margin:0">(click or drag to switch hours on or off)</i></span>
           <div class="strip" data-strip="${L.id}">${cells}</div></div>
@@ -593,7 +617,7 @@ function renderLoads() {
       <td class="num"><input type="number" data-k="sp" min="0" step="0.5" value="${L.type === 'flexible' ? L.sp : ''}" ${L.type === 'critical' ? 'disabled placeholder="—"' : ''} aria-label="Shed penalty"></td>
       <td><div class="prof"><span data-spark="${L.id}">${sparkline(L)}</span><span class="usage" data-sum="${L.id}">${usageText(L)}</span>
         <button class="btn alt small" data-act="toggle" aria-expanded="${!!L.open}">${L.open ? 'Done' : 'Edit usage'}</button></div></td>
-      <td class="num peak" data-peak="${L.id}">${fmt(peak)} kW</td>
+      <td class="num peak" data-peak="${L.id}">${pw(peak)}</td>
       <td><button class="del" data-act="remove" title="Remove load" aria-label="Remove ${esc(L.name)}">×</button></td></tr>` + (L.open ? editorRow(L) : '');
   }).join('');
   updateDiagram();
@@ -602,7 +626,7 @@ function refreshRow(L) {     // update a load's previews without rebuilding the 
   const q = s => $('loadRows').querySelector(s);
   q(`[data-spark="${L.id}"]`).innerHTML = sparkline(L);
   q(`[data-sum="${L.id}"]`).textContent = usageText(L);
-  q(`[data-peak="${L.id}"]`).textContent = `${fmt(Math.max(...profileOf(L)))} kW`;
+  q(`[data-peak="${L.id}"]`).textContent = pw(Math.max(...profileOf(L)));
   const es = q(`[data-esum="${L.id}"]`);
   if (es) es.textContent = L.mode === 'custom' ? `${onHours(L)} h/day · ${energyText(L)}` : `Default curve · ${energyText(L)}`;
   const strip = q(`[data-strip="${L.id}"]`);
@@ -622,7 +646,7 @@ $('loadRows').addEventListener('input', e => {
   if (!L || !k) return;
   if (k === 'name') { L.name = e.target.value; updateDiagram(); }
   if (k === 'sp') L.sp = parseFloat(e.target.value);
-  if (k === 'kw') { const v = parseFloat(e.target.value); if (v >= 0) { L.kw = v; refreshRow(L); } }
+  if (k === 'kw') { const v = parseFloat(e.target.value); if (v >= 0) { L.kw = v / 1000; refreshRow(L); } }
   if (k === 'dur') L.dur = Math.max(0, Math.min(24, parseInt(e.target.value, 10) || 0));
 });
 $('loadRows').addEventListener('change', e => {
@@ -666,11 +690,18 @@ $('loadRows').addEventListener('keydown', e => {   // keyboard: Enter / Space on
   e.preventDefault(); const L = findLoad(c), h = +c.dataset.h; L.hours[h] = !L.hours[h]; refreshRow(L);
 });
 $('addLoad').addEventListener('click', () => {
-  const type = $('newType').value;
-  const L = newLoad({ name: `Load ${loads.length + 1}`, type, sp: type === 'flexible' ? 15 : 0, curve: null });
+  const A = APPLIANCES[$('newType').value];
+  let name = A.name, n = 2;
+  while (loads.some(x => x.name === name)) name = `${A.name} ${n++}`;
+  const L = newLoad({ name, type: A.type, sp: A.sp, curve: null });
+  L.kw = A.w / 1000;
+  L.hours = Array(24).fill(false);
+  A.on.forEach(([a, d]) => { for (let k = 0; k < d; k++) L.hours[(a + k) % 24] = true; });
+  L.start = A.on[0][0]; L.dur = A.on.reduce((t, [, d]) => t + d, 0);
   L.open = true; loads.push(L); renderLoads();
 });
 $('resetLoads').addEventListener('click', () => { loads = DEFAULT_LOADS.map(newLoad); renderLoads(); });
+$('newType').innerHTML = Object.entries(APPLIANCES).map(([k, A]) => `<option value="${k}">${k === 'custom' ? 'Other load' : A.name} (${A.w >= 1000 ? dec(A.w / 1000, 1) + ' kW' : A.w + ' W'})</option>`).join('');
 srcFields.forEach(f => $(f).addEventListener('input', updateDiagram));
 
 /* charts */
@@ -745,10 +776,10 @@ function show(c, res) {
   const tiles = [
     [rs(K.gridCost), 'Grid cost for the day (net of export)'],
     [rs(K.dieselCost), 'Diesel fuel cost'],
-    [`${fmt(K.shedKWh)} kWh`, `Load shed (${(100 * K.shedKWh / K.demandKWh).toFixed(1)}% of demand)`],
-    [`${fmt(K.peakEveningImport)} kW`, 'Max grid import, 18:00–22:00'],
-    [`${fmt(K.co2Grid + K.co2DG)} kg`, 'CO₂ (grid share + diesel)'],
-    [`${fmt(K.dgKWh)} kWh`, 'Diesel energy']
+    [en(K.shedKWh), `Load shed (${(100 * K.shedKWh / K.demandKWh).toFixed(1)}% of demand)`],
+    [pw(K.peakEveningImport), 'Max grid import, 18:00–22:00'],
+    [`${dec(K.co2Grid + K.co2DG, 2)} kg`, 'CO₂ (grid share + diesel)'],
+    [en(K.dgKWh), 'Diesel energy']
   ];
   $('kpis').innerHTML = tiles.map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
   lastResult = { c, res };
@@ -821,13 +852,13 @@ function updateLive() {
   const i = +$('tod').value;
   $('todLbl').textContent = labels[i];
   if (!lastResult) return;
-  const R = lastResult.res.R, kw = x => `${fmt(Math.abs(x))} kW`, EPS = 0.5;
+  const R = lastResult.res.R, kw = x => pw(Math.abs(x)), EPS = 0.005;
   const pv = R.pv[i], pb = R.pb[i], dg = R.dg[i], g = R.grid[i], dem = R.demand[i], srv = R.served[i];
   $('hubTime').textContent = labels[i];
   $('hubPrice').textContent = `Tariff ${R.priceOff[i].toFixed(1)} Rs/kWh`;
   setUnit('pv', kw(pv), pv > EPS ? 'Generating' : 'No sun', pv > EPS); setLink('pv', pv > EPS, true);
   const shed = dem - srv;
-  setUnit('load', kw(srv), shed > EPS ? `Demand ${fmt(dem)} kW · ${fmt(shed)} kW shed` : 'Supplied in full', true); setLink('load', srv > EPS, false);
+  setUnit('load', kw(srv), shed > EPS ? `Demand ${pw(dem)} · ${pw(shed)} shed` : 'Supplied in full', true); setLink('load', srv > EPS, false);
   setUnit('grid', kw(g), g > EPS ? 'Importing' : g < -EPS ? 'Exporting' : 'Idle', Math.abs(g) > EPS); setLink('grid', Math.abs(g) > EPS, g > 0);
   const soc = R.soc[i];
   setUnit('bess', kw(pb), (pb > EPS ? 'Discharging' : pb < -EPS ? 'Charging' : 'Idle') + ` · SOC ${soc.toFixed(0)}%`, Math.abs(pb) > EPS); setLink('bess', Math.abs(pb) > EPS, pb > 0);

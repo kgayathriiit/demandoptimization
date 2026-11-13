@@ -27,6 +27,10 @@ instantaneous battery inverter. Shed limits use the load at each step of the hor
 
 ## Sources and loads
 
+The page models ONE house: the study's 1000-household microgrid divided by 1000 (PV 0.75 kW, battery 2.5 kWh /
+0.4 kW, diesel 1.2 kW, loads in watts). The LP and the rules are linear, so the decisions are the study's, scaled.
+"+ Add load" offers common appliances (fan, LED lights, TV, AC, geyser, pump, EV charger, …) with typical wattage and hours.
+
 - Sources: PV rating (kWp), battery capacity / power / starting SOC, diesel rating and price can be changed.
   The grid has no import/export limit, as in the original model.
 - Loads: any number (default: the 5 loads of the study). Each load is critical (never shed) or flexible
